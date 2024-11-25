@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
             motionsFile = "../new_format_motions/car1_v0/car1_v0.msgpack";
         } else if (robotType == "integrator2_2d_v0"){
             motionsFile = "../new_format_motions/integrator2_2d_v0/integrator2_2d_v0.msgpack";
-        } else if (robotType == "integrator2_3d_v0"){
+        } else if (robotType == "integrator2_3d_v0" || robotType == "integrator2_3d_large_v0"){
             motionsFile = "../new_format_motions/integrator2_3d_v0/long_50/integrator2_3d_v0.bin.im.bin.sp.bin";
         } else{
             throw std::runtime_error("Unknown motion filename for this robottype!");
@@ -380,6 +380,7 @@ int main(int argc, char* argv[]) {
           auto discrete_end = std::chrono::high_resolution_clock::now();
           std::chrono::duration<double> duration = discrete_end - discrete_start;
           std::cout << "Time taken for discrete search: " << duration.count() << " seconds" << std::endl;
+          return 0;
           // read the discrete search as initial guess for clustered robots ONLY
           MultiRobotTrajectory discrete_search_sol;
           if(residual_force){ // augment the state artificially for the optimization
