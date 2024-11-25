@@ -184,15 +184,23 @@ def main():
 		# "window4_demo",
 
 		# 3D scenarios with octomap
-		"drone1c",
-		"drone2c",
-		"drone4c",
-		"drone8c",
-		"drone10c",
-		"drone12c",
-		"drone16c",
-		"drone24c",
-		"drone32c",
+		# "drone1c",
+		# "drone2c",
+		# "drone4c",
+		# "drone8c",
+		# "drone10c",
+		# "drone12c",
+		# "drone16c",
+		# "drone24c",
+		# "drone32c",
+		# heterogeneous case, 50% small - 50% large robots
+		"drone4c_het",
+		"drone8c_het",
+		"drone10c_het",
+		"drone12c_het",
+		"drone16c_het",
+		"drone24c_het",
+		"drone32c_het",
 	]
 
 	# # add random cases
