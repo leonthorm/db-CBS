@@ -69,6 +69,7 @@ db-ecbs:
     execute_greedy_optimization: True
     save_expanded_trajs: False
     residual_force: True # use w=2 if Ellipsoid
+    heterogeneous: True # heterogeneous robots for the discrete search
   '*_unicycle_sphere':
     delta_0: 0.9
     # suboptimality_factor: 3.3

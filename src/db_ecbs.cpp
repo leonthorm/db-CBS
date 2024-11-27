@@ -81,6 +81,7 @@ int main(int argc, char* argv[]) {
     std::string conflicts_folder = output_folder + "/conflicts";
     Eigen::Vector3d radii = Eigen::Vector3d(.12, .12, .3);
     bool residual_force = cfg["residual_force"].as<bool>();
+    bool heterogeneous = cfg["heterogeneous"].as<bool>();
     // optimization-related params
     bool sum_robot_cost = true;
     bool feasible = false;
@@ -212,7 +213,7 @@ int main(int argc, char* argv[]) {
                 out_tdb, robot_id,/*reverse_search*/true, 
                 expanded_trajs_tmp, tmp_solutions, robot_motions,
                 robots, col_mng_robots, robot_objs,
-                nullptr, &heuristics[robot_id], options_tdbastar.w);
+                nullptr, &heuristics[robot_id], /*heter*/false, options_tdbastar.w);
         std::cout << "computed heuristic with " << heuristics[robot_id]->size() << " entries." << std::endl;
         robot_id++;
       }
@@ -266,16 +267,18 @@ int main(int argc, char* argv[]) {
       bool start_node_valid = true;
       robot_id = 0;
       int id = 1;
+      // clean the tmp solutions
+      tmp_solutions.clear();
       std::cout << "Node ID is " << id << ", root" << std::endl;
       for (const auto &robot : robots){
         expanded_trajs_tmp.clear();
         options_tdbastar.motions_ptr = &robot_motions[problem.robotTypes[robot_id]]; 
-        tdbastar_epsilon(problem, options_tdbastar, 
+        tdbastar_epsilon(problem, options_tdbastar,                                  
                 start.solution[robot_id].trajectory, start.constraints[robot_id],
                 out_tdb, robot_id,/*reverse_search*/false, 
-                expanded_trajs_tmp, start.solution, robot_motions,
+                expanded_trajs_tmp, tmp_solutions, robot_motions,
                 robots, col_mng_robots, robot_objs,
-                heuristics[robot_id], nullptr, options_tdbastar.w);
+                heuristics[robot_id], nullptr, heterogeneous, options_tdbastar.w);
         if(!out_tdb.solved){
           std::cout << "Couldn't find initial solution for robot " << robot_id << "." << std::endl;
           start_node_valid = false;
@@ -380,7 +383,7 @@ int main(int argc, char* argv[]) {
           auto discrete_end = std::chrono::high_resolution_clock::now();
           std::chrono::duration<double> duration = discrete_end - discrete_start;
           std::cout << "Time taken for discrete search: " << duration.count() << " seconds" << std::endl;
-          return 0;
+          // return 0;
           // read the discrete search as initial guess for clustered robots ONLY
           MultiRobotTrajectory discrete_search_sol;
           if(residual_force){ // augment the state artificially for the optimization
@@ -503,7 +506,7 @@ int main(int argc, char* argv[]) {
                       fout << "  - " << c << std::endl;
                     }
                   }
-                  bool joint_opt = true;
+                  bool joint_opt = false; // gigantic one in the end
                   if(joint_opt){
                     MultiRobotTrajectory joint_opt_sol;
                     joint_opt_sol.trajectories.resize(num_robots);
@@ -684,7 +687,9 @@ int main(int argc, char* argv[]) {
                 tmp_out_tdb, tmp_robot_id, /*reverse_search*/false, 
                 expanded_trajs_tmp, newNode.solution, robot_motions,
                 robots, col_mng_robots, robot_objs,
-                heuristics[tmp_robot_id], nullptr, options_tdbastar.w, /*run_focal_heuristic*/true);
+                heuristics[tmp_robot_id], nullptr, heterogeneous,
+                options_tdbastar.w, /*run_focal_heuristic*/true);
+
           if (tmp_out_tdb.solved){
               newNode.cost += newNode.solution[tmp_robot_id].trajectory.cost;
               newNode.LB += newNode.solution[tmp_robot_id].trajectory.fmin;
