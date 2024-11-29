@@ -122,10 +122,15 @@ int main(int argc, char* argv[]) {
         fcl::Vector3f(env_max[0].as<double>(), env_max[1].as<double>(), 1));
 
     std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
-    // std::vector<dynobench::Trajectory> ll_trajs;
     std::string motionsFile;
     std::vector<std::string> all_motionsFile;
-    for (const auto &robotType : problem.robotTypes){
+    for (auto &robotType : problem.robotTypes){
+      if(heterogeneous){ // considers only integrator2_3d dynamics
+        if (robotType == "integrator2_3d_large_v0")
+          robotType = "integrator2_3d_res_large_v0";
+        else
+          robotType = "integrator2_3d_res_v0";
+        }
         std::shared_ptr<dynobench::Model_robot> robot = dynobench::robot_factory(
                 (problem.models_base_path + robotType + ".yaml").c_str(), problem.p_lb, problem.p_ub);
         robots.push_back(robot);
@@ -139,6 +144,8 @@ int main(int argc, char* argv[]) {
             motionsFile = "../new_format_motions/integrator2_2d_v0/integrator2_2d_v0.msgpack";
         } else if (robotType == "integrator2_3d_v0" || robotType == "integrator2_3d_large_v0"){
             motionsFile = "../new_format_motions/integrator2_3d_v0/long_50/integrator2_3d_v0.bin.im.bin.sp.bin";
+        } else if (robotType.find("_res_") != std::string::npos){
+            motionsFile = "../new_format_motions/integrator2_3d_v0/residual/integrator2_3d_v0.bin.im.bin.sp.bin";
         } else{
             throw std::runtime_error("Unknown motion filename for this robottype!");
         }
