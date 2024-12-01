@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
       return 1;
     }
     YAML::Node cfg = YAML::LoadFile(cfgFile);
-    // cfg = cfg["db-ecbs"]["default"];
+    cfg = cfg["db-ecbs"]["default"];
     float alpha = cfg["alpha"].as<float>();
     bool filter_duplicates = cfg["filter_duplicates"].as<bool>();
     fs::path output_path(outputFile);
@@ -295,7 +295,7 @@ int main(int argc, char* argv[]) {
         start.LB += start.solution[robot_id].trajectory.fmin;
         robot_id++;
       }
-      start.focalHeuristic = highLevelfocalHeuristicState(start.solution, robots, col_mng_robots, robot_objs); 
+      start.focalHeuristic = highLevelfocalHeuristicState(start.solution, robots, problem.robotTypes, col_mng_robots, robot_objs, heterogeneous); 
       if (!start_node_valid) {
             continue;
       }
@@ -381,7 +381,12 @@ int main(int argc, char* argv[]) {
         focal.pop();
         open.erase(current_handle);
         Conflict inter_robot_conflict;
+        std::map<size_t, std::vector<Constraint>> constraints;
         if (!getEarliestConflict(P.solution, robots, col_mng_robots, robot_objs, inter_robot_conflict)){
+          if(residual_force){
+            if(getEarliestViolations(P.solution, problem.robotTypes, constraints))
+              break;
+          }
           solved_db = true;
           std::cout << "Final solution from db-ecbs!" << std::endl; 
           create_dir_if_necessary(outputFile);
@@ -390,7 +395,7 @@ int main(int argc, char* argv[]) {
           auto discrete_end = std::chrono::high_resolution_clock::now();
           std::chrono::duration<double> duration = discrete_end - discrete_start;
           std::cout << "Time taken for discrete search: " << duration.count() << " seconds" << std::endl;
-          // return 0;
+          return 0;
           // read the discrete search as initial guess for clustered robots ONLY
           MultiRobotTrajectory discrete_search_sol;
           if(residual_force){ // augment the state artificially for the optimization
@@ -666,9 +671,9 @@ int main(int argc, char* argv[]) {
         if (expands % 100 == 0) {
          std::cout << "HL expanded: " << expands << " open: " << open.size() << " cost " << P.cost << " conflict at " << inter_robot_conflict.time << std::endl;
         }
-
-        std::map<size_t, std::vector<Constraint>> constraints;
-        createConstraintsFromConflicts(inter_robot_conflict, constraints);
+        // std::map<size_t, std::vector<Constraint>> constraints;
+        if(constraints.empty()) 
+          createConstraintsFromConflicts(inter_robot_conflict, constraints);
         if(save_search_video){
           // get the plot of high-level node solution with conflicts
           auto filename = conflicts_folder + "/" + std::to_string(P.id) + ".yaml";
@@ -700,7 +705,7 @@ int main(int argc, char* argv[]) {
           if (tmp_out_tdb.solved){
               newNode.cost += newNode.solution[tmp_robot_id].trajectory.cost;
               newNode.LB += newNode.solution[tmp_robot_id].trajectory.fmin;
-              newNode.focalHeuristic = highLevelfocalHeuristicState(newNode.solution, robots, col_mng_robots, robot_objs); 
+              newNode.focalHeuristic = highLevelfocalHeuristicState(newNode.solution, robots, problem.robotTypes, col_mng_robots, robot_objs, heterogeneous); 
               std::cout << "New node solution cost:  " << newNode.solution[tmp_robot_id].trajectory.cost << std::endl;
               std::cout << "New node cost: " << newNode.cost << " New node LB: " << newNode.LB << std::endl;
               std::cout << "New node focal heuristic: " << newNode.focalHeuristic << std::endl;
