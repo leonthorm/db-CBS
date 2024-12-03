@@ -283,9 +283,6 @@ int main(int argc, char* argv[]) {
                                           optimizationFile,
                                           DYNOBENCH_BASE,
                                           sum_robot_cost);
-            // debug
-            // std::string output_folder = output_path.parent_path().string();
-            // std::ofstream out2(output_folder + "/expanded_nodes.yaml");
             std::ofstream fout(optimizationFile, std::ios::app); 
             fout << "  nodes: " << id << std::endl;
             if (feasible) {

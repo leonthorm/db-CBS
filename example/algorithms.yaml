@@ -54,25 +54,26 @@ db-cbs:
     delta_0: 0.9
 db-ecbs:
   default:
-    delta_0: 0.5
+    delta_0: 0.5 # 0.3
     delta_rate: 0.9
-    num_primitives_0: 200
+    num_primitives_0: 300 # 100, 500
     num_primitives_rate: 1.5
     alpha: 0.5
     filter_duplicates: True
     heuristic1: "reverse-search"
     heuristic1_delta: 1.0
-    heuristic1_num_primitives_0: 100
-    suboptimality_factor: 1.3 # 3.3
+    heuristic1_num_primitives_0: 300
+    suboptimality_factor: 1.3 # 3.3, use 2 if Ellipsoid
     always_add_node: False
-    rewire: True
-    execute_greedy_optimization: True
-    save_expanded_trajs: False
-    residual_force: True # use w=2 if Ellipsoid
-    heterogeneous: True # heterogeneous robots for the discrete search
+    rewire: True 
+    save_expanded_trajs: False # expanded motions during the discrete search
+    execute_greedy_optimization: False # cbs-style optimization
+    execute_joint_optimization: True # optimization in the joint state space
+    residual_force: False # with NN or not
+    heterogeneous: False # heterogeneous robots 
   '*_unicycle_sphere':
     delta_0: 0.9
-    # suboptimality_factor: 3.3
+    suboptimality_factor: 3.3
   '*_hetero':
     delta_0: 0.75
   '*_trailer':

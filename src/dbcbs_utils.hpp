@@ -233,6 +233,7 @@ bool getEarliestConflict(
 }
 // for heterogeneous case with the residual force
 // no prioritization, only create constraints
+// doesn't work with car_trailer, assumes robots are in consec.order
 bool getEarliestViolations(
     const std::vector<LowLevelPlan<dynobench::Trajectory>>& solution,
     std::vector<std::string>& robot_types,
