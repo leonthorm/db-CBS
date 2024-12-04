@@ -216,8 +216,8 @@ def main():
 		"db-cbs",
 		"db-ecbs",
 	]
-	trials = 3
-	timelimit = 1*60 
+	trials = 2
+	timelimit = 2*60 
 
 	tasks = []
 	for instance in instances:
