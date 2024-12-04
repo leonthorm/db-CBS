@@ -402,27 +402,27 @@ int main(int argc, char* argv[]) {
                 cluster.insert(i);
             }
             auto start = std::chrono::high_resolution_clock::now();
-            // feasible = execute_optimizationMetaRobot(inputFile,
-            //                           /*initialGuess*/discrete_search_sol, 
-            //                           /*solution*/optimization_sol,
-            //                           DYNOBENCH_BASE,
-            //                           cluster,
-            //                           sum_robot_cost,
-            //                           residual_force);
-            // if(feasible){
-            //   std::cout << "Joint optimization is done" << std::endl;
-            //   optimization_sol.to_yaml_format(optimizationFile.c_str());
-            //   auto end = std::chrono::high_resolution_clock::now();
-            //   std::chrono::duration<double> duration = end - start;
-            //   std::cout << "Time taken for joint optimization: " << duration.count() << " seconds" << std::endl;
-            // }
-            bool feasible = execute_optimizationMultiRobot(inputFile,
-                                          outputFile, 
-                                          optimizationFile,
-                                          DYNOBENCH_BASE,
-                                          sum_robot_cost);
-            if(!feasible)
-              std::cout << "optimization failed" << std::endl;
+            feasible = execute_optimizationMetaRobot(inputFile,
+                                      /*initialGuess*/discrete_search_sol, 
+                                      /*solution*/optimization_sol,
+                                      DYNOBENCH_BASE,
+                                      cluster,
+                                      sum_robot_cost,
+                                      residual_force);
+            if(feasible){
+              std::cout << "Joint optimization is done" << std::endl;
+              optimization_sol.to_yaml_format(optimizationFile.c_str());
+              auto end = std::chrono::high_resolution_clock::now();
+              std::chrono::duration<double> duration = end - start;
+              std::cout << "Time taken for joint optimization: " << duration.count() << " seconds" << std::endl;
+            }
+            // bool feasible = execute_optimizationMultiRobot(inputFile,
+            //                               outputFile, 
+            //                               optimizationFile,
+            //                               DYNOBENCH_BASE,
+            //                               sum_robot_cost);
+            // if(!feasible)
+            //   std::cout << "optimization failed" << std::endl;
             return 0;
           }
           // bloody optimization part starts here
