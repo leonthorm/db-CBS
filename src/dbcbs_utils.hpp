@@ -22,7 +22,8 @@
 #include <dynoplan/optimization/multirobot_optimization.hpp>
 #include "dynobench/motions.hpp"
 #include <tuple>
-
+// nn
+#include "dynobench/nn.h"
 // Conflicts 
 struct Conflict {
   double time;
@@ -228,7 +229,77 @@ bool getEarliestConflict(
     }
     return false;
 }
+// for heterogeneous case with the residual force
+// no prioritization, only create constraints
+// doesn't work with car_trailer, assumes robots are in consec.order
+bool getEarliestViolations(
+  const std::vector<LowLevelPlan<dynobench::Trajectory>>& solution,
+  std::vector<std::string>& robot_types,
+  std::map<size_t, std::vector<dynoplan::Constraint>>& constraints){
+  double max_f = 0.0981; // in Newton
+  float rho;
+  std::vector<size_t> involved_robots;
+  size_t max_t = 0;
+  for (const auto& sol : solution){
+    max_t = std::max(max_t, sol.trajectory.states.size() - 1);
+  }
+  Eigen::VectorXd state, state1, state2;
+  std::vector<Eigen::VectorXd> states;
+  for (size_t t = 0; t <= max_t; ++t){
+    states.clear();
+    for (size_t robot_idx = 0; robot_idx < solution.size(); ++robot_idx){
+      if (t >= solution[robot_idx].trajectory.states.size()){
+        state = solution[robot_idx].trajectory.states.back();    
+      }
+      else {
+        state = solution[robot_idx].trajectory.states[t];
+      }
+      states.push_back(state);
+    }
+    for (size_t i = 0; i < solution.size(); ++i){
+      involved_robots.clear(); // for each robot
+      rho = 0; // for each robot 
+      state1 = states.at(i);
+      for (size_t j = 0; j < solution.size(); ++j){
+        if (i != j) { // fa for each robot coming from neighbors
+          state2 = states.at(j);
+          auto dist = state1 - state2;
+          if (abs(dist(0)) < 0.2 && abs(dist(1)) < 0.2 &&
+              abs(dist(2)) < 1.5) {
+            float input[6] = {
+              static_cast<float>(dist(0)), static_cast<float>(dist(1)),
+              static_cast<float>(dist(2)), static_cast<float>(dist(3)),
+              static_cast<float>(dist(4)), static_cast<float>(dist(5))};
+            nn_reset();
+            const auto nnType = (robot_types[j] == "integrator2_3d_large_v0")
+                                  ? NN_ROBOT_LARGE
+                                  : NN_ROBOT_SMALL;
 
+            nn_add_neighbor(input, nnType);
+            // keep track of contributing robots
+            involved_robots.push_back(j);
+          }
+        }
+      }
+      // after checking all neighbors
+      const auto selfType = (robot_types[i] == "integrator2_3d_large_v0")
+                                ? NN_ROBOT_LARGE
+                                : NN_ROBOT_SMALL;
+      const float *rhoOutput = nn_eval(selfType); // in grams
+      rho = rhoOutput[0] / 1000 * 9.81;           // in Newtons
+      if (rho < -max_f || rho > max_f){ 
+        std::cout << "fa violations" << std::endl;
+        for(auto& k : involved_robots){ // create constraints for each involved neighbor
+          constraints[k].push_back({t, states.at(k)});
+        }
+        // add the self robot
+        constraints[i].push_back({t, states.at(i)});
+        return true; // as soon as the violation happends
+      }
+    }
+  } // time loop
+  return false;
+}
 void createConstraintsFromConflicts(const Conflict& early_conflict, std::map<size_t, std::vector<dynoplan::Constraint>>& constraints){
     constraints[early_conflict.robot_idx_i].push_back({early_conflict.time, early_conflict.robot_state_i});
     constraints[early_conflict.robot_idx_j].push_back({early_conflict.time, early_conflict.robot_state_j});
