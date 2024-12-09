@@ -196,7 +196,7 @@ def main():
 	]
 
 	# add random cases
-	for kind in ["hetero"]: # "unicycle_sphere"
+	for kind in ["unicycle_sphere", "hetero"]: 
 		for n in [2,4,8]:
 			for k in range(10):
 				instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
@@ -208,8 +208,8 @@ def main():
 		"db-cbs",
 		"db-ecbs",
 	]
-	trials = 1 
-	timelimit = 2*60 
+	trials = 3 
+	timelimit = 3*60 
 
 	tasks = []
 	for instance in instances:
@@ -246,7 +246,7 @@ def main():
 	# paper_tables.write_table2(trials, timelimit)
 	# paper_tables.write_table3(trials, timelimit)
 	# paper_tables.write_table4(trials, timelimit)
-	# paper_tables.write_table5(trials, timelimit)
+	paper_tables.write_table5(trials, timelimit)
 
 if __name__ == '__main__':
 	main()
