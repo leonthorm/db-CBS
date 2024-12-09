@@ -156,9 +156,10 @@ int main(int argc, char* argv[]) {
     std::vector<fcl::CollisionObjectd*> robot_objs;
     std::shared_ptr<fcl::BroadPhaseCollisionManagerd> col_mng_robots;
     col_mng_robots = std::make_shared<fcl::DynamicAABBTreeCollisionManagerd>();
-    size_t col_geom_id = 0;
     col_mng_robots->setup();
+    size_t col_geom_id = 0;
     size_t i = 0;
+    std::map<size_t, std::vector<size_t>> rob_obj_set;
     for (const auto &robot : robots){
       // if(residual_force && robot->name == "Integrator2_3d"){
       //   collision_geometries.push_back(std::make_shared<fcl::Ellipsoidd>(radii));
@@ -175,23 +176,24 @@ int main(int argc, char* argv[]) {
                                       options_tdbastar.max_motions,
                                       options_tdbastar.cut_actions, false, options_tdbastar.check_cols);
       }
+      rob_obj_set[i].push_back(col_geom_id);
       if (robot->name == "car_with_trailers") {
         col_geom_id++;
         auto robot_obj = new fcl::CollisionObject(collision_geometries[col_geom_id]);
         collision_geometries[col_geom_id]->setUserData((void*)i); // for the trailer
         robot_objs.push_back(robot_obj);
+        rob_obj_set[i].push_back(col_geom_id);
       }
-      
       col_geom_id++;
       i++;
     }
     col_mng_robots->registerObjects(robot_objs);
-    // Heuristic computation
     size_t robot_id = 0;
     size_t num_robots = robots.size();
     std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>>*> heuristics(num_robots, nullptr);
     std::vector<dynobench::Trajectory> expanded_trajs_tmp;
     std::vector<LowLevelPlan<dynobench::Trajectory>> tmp_solutions(num_robots);
+    
     if (cfg["heuristic1"].as<std::string>() == "reverse-search"){
       std::map<std::string, std::vector<Motion>> robot_motions_reverse;
       options_tdbastar.delta = cfg["heuristic1_delta"].as<float>();
@@ -217,13 +219,14 @@ int main(int argc, char* argv[]) {
         options_tdbastar.motions_ptr = &robot_motions_reverse[problem.robotTypes[robot_id]]; 
         tdbastar_epsilon(problem, options_tdbastar, 
                 tmp_solution.trajectory,/*constraints*/{},
-                out_tdb, robot_id,/*reverse_search*/true, 
+                out_tdb, robot_id, rob_obj_set, /*reverse_search*/true, 
                 expanded_trajs_tmp, tmp_solutions, robot_motions,
                 robots, col_mng_robots, robot_objs,
                 nullptr, &heuristics[robot_id], /*residual_force*/false, options_tdbastar.w);
         std::cout << "computed heuristic with " << heuristics[robot_id]->size() << " entries." << std::endl;
         robot_id++;
       }
+
       auto reverse_end = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> duration = reverse_end - reverse_start;
       std::cout << "Time taken for the reverse search: " << duration.count() << " seconds" << std::endl;
@@ -281,7 +284,7 @@ int main(int argc, char* argv[]) {
         options_tdbastar.motions_ptr = &robot_motions[problem.robotTypes[robot_id]]; 
         tdbastar_epsilon(problem, options_tdbastar, 
                 start.solution[robot_id].trajectory, start.constraints[robot_id],
-                out_tdb, robot_id,/*reverse_search*/false, 
+                out_tdb, robot_id, rob_obj_set, /*reverse_search*/false, 
                 expanded_trajs_tmp, tmp_solutions, robot_motions,
                 robots, col_mng_robots, robot_objs,
                 heuristics[robot_id], nullptr, residual_force, options_tdbastar.w);
@@ -570,7 +573,6 @@ int main(int argc, char* argv[]) {
         }
         if(constraints.empty()) 
           createConstraintsFromConflicts(inter_robot_conflict, constraints);
-        createConstraintsFromConflicts(inter_robot_conflict, constraints);
         if(save_search_video){
           // get the plot of high-level node solution with conflicts
           auto filename = conflicts_folder + "/" + std::to_string(P.id) + ".yaml";
@@ -593,10 +595,10 @@ int main(int argc, char* argv[]) {
           options_tdbastar.motions_ptr = &robot_motions[problem.robotTypes[tmp_robot_id]]; 
           tdbastar_epsilon(problem, options_tdbastar, 
                 newNode.solution[tmp_robot_id].trajectory, newNode.constraints[tmp_robot_id],
-                tmp_out_tdb, tmp_robot_id, /*reverse_search*/false, 
+                tmp_out_tdb, tmp_robot_id, rob_obj_set, /*reverse_search*/false, 
                 expanded_trajs_tmp, newNode.solution, robot_motions,
                 robots, col_mng_robots, robot_objs,
-                heuristics[tmp_robot_id], nullptr, options_tdbastar.w, /*run_focal_heuristic*/true);
+                heuristics[tmp_robot_id], nullptr, residual_force, options_tdbastar.w, /*run_focal_heuristic*/true);
           if (tmp_out_tdb.solved){
               newNode.cost += newNode.solution[tmp_robot_id].trajectory.cost;
               newNode.LB += newNode.solution[tmp_robot_id].trajectory.fmin;
