@@ -171,6 +171,7 @@ def write_table5(trials, timelimit):
 		"s2m2",
 		"k-cbs",
 		"db-cbs",
+		"db-ecbs",
 	]
 
 	instance_names = {
@@ -191,6 +192,7 @@ def write_table5(trials, timelimit):
 		"s2m2": "S2M2",
 		"k-cbs": "k-CBS",
 		"db-cbs": "db-CBS",
+		"db-ecbs": "db-ECBS",
 	}
 
 	result = benchmark_table.compute_results(instances, algs, Path("../results"), trials, timelimit, True)
@@ -205,22 +207,23 @@ def write_table5(trials, timelimit):
 
 		out = r"\begin{tabular}{c || c"
 		for alg in algs:
-			out += r" || r|r|r|r"
+			out += r" || r|r|r" # |r
 		out += "}\n"
 		f.write(out)
 		out = r"\# & Instance"
 		for k, alg in enumerate(algs):
 			if k == len(algs) - 1:
-				out += r" & \multicolumn{4}{c}{"
+				out += r" & \multicolumn{3}{c}{" # 4
 			else:
-				out += r" & \multicolumn{4}{c||}{"
+				out += r" & \multicolumn{3}{c||}{"
 			out += alg_names[alg]
 			out += r"}"
 		out += r"\\"
 		f.write(out)
 		out = r"& "
 		for alg in algs:
-			out += r" & $p$ & $t [s]$ & $J [s]$ & $r [\%]$"
+			# out += r" & $p$ & $t [s]$ & $J [s]$ & $r [\%]$"
+			out += r" & $p$ & $t [s]$ & $J [s]$" # without notion of regret
 		out += r"\\"
 		f.write(out)
 		f.write(r"\hline")
@@ -247,7 +250,7 @@ def write_table5(trials, timelimit):
 				out = benchmark_table.print_and_highlight_best_max(out, 'success', result[instance], alg, algs)
 				out = benchmark_table.print_and_highlight_best(out, 't^st_median', result[instance], alg, algs)
 				out = benchmark_table.print_and_highlight_best(out, 'J^st_median', result[instance], alg, algs)
-				out = benchmark_table.print_and_highlight_best(out, 'Jr^st_median', result[instance], alg, algs, digits=0)
+				# out = benchmark_table.print_and_highlight_best(out, 'Jr^st_median', result[instance], alg, algs, digits=0) // without notion of regret
 
 			out += r"\\"
 			f.write(out)
