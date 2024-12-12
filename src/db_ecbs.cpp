@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
       return 1;
     }
     YAML::Node cfg = YAML::LoadFile(cfgFile);
-    // cfg = cfg["db-ecbs"]["default"];
+    cfg = cfg["db-ecbs"]["default"];
     float alpha = cfg["alpha"].as<float>();
     bool filter_duplicates = cfg["filter_duplicates"].as<bool>();
     fs::path output_path(outputFile);
@@ -193,7 +193,10 @@ int main(int argc, char* argv[]) {
     std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>>*> heuristics(num_robots, nullptr);
     std::vector<dynobench::Trajectory> expanded_trajs_tmp;
     std::vector<LowLevelPlan<dynobench::Trajectory>> tmp_solutions(num_robots);
-    
+    std::vector<double> low_cost_bounds(num_robots, std::numeric_limits<double>::max());
+    double cost_tmp = 0;
+    double lowest_cost = std::numeric_limits<double>::max();
+
     if (cfg["heuristic1"].as<std::string>() == "reverse-search"){
       std::map<std::string, std::vector<Motion>> robot_motions_reverse;
       options_tdbastar.delta = cfg["heuristic1_delta"].as<float>();
@@ -219,7 +222,7 @@ int main(int argc, char* argv[]) {
         options_tdbastar.motions_ptr = &robot_motions_reverse[problem.robotTypes[robot_id]]; 
         tdbastar_epsilon(problem, options_tdbastar, 
                 tmp_solution.trajectory,/*constraints*/{},
-                out_tdb, robot_id, rob_obj_set, /*reverse_search*/true, 
+                out_tdb, robot_id, low_cost_bounds[robot_id], rob_obj_set, /*reverse_search*/true, 
                 expanded_trajs_tmp, tmp_solutions, robot_motions,
                 robots, col_mng_robots, robot_objs,
                 nullptr, &heuristics[robot_id], /*residual_force*/false, options_tdbastar.w);
@@ -284,7 +287,7 @@ int main(int argc, char* argv[]) {
         options_tdbastar.motions_ptr = &robot_motions[problem.robotTypes[robot_id]]; 
         tdbastar_epsilon(problem, options_tdbastar, 
                 start.solution[robot_id].trajectory, start.constraints[robot_id],
-                out_tdb, robot_id, rob_obj_set, /*reverse_search*/false, 
+                out_tdb, robot_id, low_cost_bounds[robot_id], rob_obj_set, /*reverse_search*/false, 
                 expanded_trajs_tmp, tmp_solutions, robot_motions,
                 robots, col_mng_robots, robot_objs,
                 heuristics[robot_id], nullptr, residual_force, options_tdbastar.w);
@@ -414,11 +417,26 @@ int main(int argc, char* argv[]) {
                                       residual_force);
             if(feasible){
               std::cout << "Joint optimization is done" << std::endl;
-              optimization_sol.to_yaml_format(optimizationFile.c_str());
               auto end = std::chrono::high_resolution_clock::now();
               std::chrono::duration<double> duration = end - start;
               std::cout << "Time taken for joint optimization: " << duration.count() << " seconds" << std::endl;
-              return 0;
+              // check for lower-bounds
+              cost_tmp = 0;
+              for (auto & traj: optimization_sol.trajectories) {
+                cost_tmp += traj.cost;
+              }
+              double low_cost_bounds_total = std::accumulate(low_cost_bounds.begin(), low_cost_bounds.end(), 0);
+              for (auto& lb: low_cost_bounds) {
+                double lb_tmp = cost_tmp - low_cost_bounds_total + lb; // take into account ONLY neighbors
+                if (lb_tmp < lb)
+                  lb = lb_tmp; // update for the current robot
+              }
+              if (cost_tmp < lowest_cost) {
+                lowest_cost = cost_tmp;
+                optimization_sol.to_yaml_format(optimizationFile.c_str());
+              }
+              // extract motions from the solution
+              extract_motion_primitives(problem, optimization_sol, robot_motions, robots);
             }
             break; // continue with the next iteration
           }
@@ -595,7 +613,7 @@ int main(int argc, char* argv[]) {
           options_tdbastar.motions_ptr = &robot_motions[problem.robotTypes[tmp_robot_id]]; 
           tdbastar_epsilon(problem, options_tdbastar, 
                 newNode.solution[tmp_robot_id].trajectory, newNode.constraints[tmp_robot_id],
-                tmp_out_tdb, tmp_robot_id, rob_obj_set, /*reverse_search*/false, 
+                tmp_out_tdb, tmp_robot_id, low_cost_bounds[tmp_robot_id], rob_obj_set, /*reverse_search*/false, 
                 expanded_trajs_tmp, newNode.solution, robot_motions,
                 robots, col_mng_robots, robot_objs,
                 heuristics[tmp_robot_id], nullptr, residual_force, options_tdbastar.w, /*run_focal_heuristic*/true);
