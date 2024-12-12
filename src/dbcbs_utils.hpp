@@ -687,7 +687,7 @@ void extract_motion_primitives(dynobench::Problem problem,
     int idx = 0;
     int total_actions = robot_trajectory.actions.size();
     while (idx < total_actions){
-      int num_actions = rand() % 11 + 10; // [10 - 20]
+      int num_actions = rand() % 11 + 6; // [10 - 6]
       num_actions = std::min(num_actions, (total_actions - idx));
       if ((total_actions - (idx + num_actions)) < 5 && idx + num_actions < total_actions) {
         num_actions = total_actions - idx;
@@ -705,7 +705,7 @@ void extract_motion_primitives(dynobench::Problem problem,
       }
       new_trajectory.states = state_vector;
       dynoplan::Motion new_motion;
-      traj_to_motion(new_trajectory, *all_robots[robot_idx], new_motion, /*check collision*/false);
+      traj_to_motion(new_trajectory, *all_robots[robot_idx], new_motion, /*check collision*/true);
       new_motion.traj = new_trajectory;
       new_motion.idx = robot_motions[problem.robotTypes[robot_idx]].size();
       robot_motions[problem.robotTypes[robot_idx]].push_back(std::move(new_motion));
