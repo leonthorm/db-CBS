@@ -300,7 +300,7 @@ def quad3dpayload_meshcatViewer():
             __path = __path["result"]
         plot_and_visualize = False
         
-        if __path["states"]:
+        if "states" in __path and "actions" in __path:
             plot_and_visualize = True
         
         if plot_and_visualize:
@@ -410,9 +410,9 @@ def quad3dpayload_meshcatViewer():
                 raise NotImplementedError("unknown result format")
 
             desired = True
-            visualizer.draw_traces(np.array(states_d), quadNum, pType, lengths, desired)
+            visualizer.draw_traces(np.array(states_d, dtype=np.float64), quadNum, pType, lengths, desired)
         desired = False
-        visualizer.draw_traces(np.array(states), quadNum, pType, lengths, desired)
+        visualizer.draw_traces(np.array(states, dtype=np.float64), quadNum, pType, lengths, desired)
         # print("shape of states: ", np.array(states).shape)
 
         anim = Animation()
