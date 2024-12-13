@@ -687,7 +687,7 @@ void extract_motion_primitives(dynobench::Problem problem,
     int idx = 0;
     int total_actions = robot_trajectory.actions.size();
     while (idx < total_actions){
-      int num_actions = rand() % 11 + 6; // [10 - 6]
+      int num_actions = rand() % 11 + 1; // [0-10]
       num_actions = std::min(num_actions, (total_actions - idx));
       if ((total_actions - (idx + num_actions)) < 5 && idx + num_actions < total_actions) {
         num_actions = total_actions - idx;
