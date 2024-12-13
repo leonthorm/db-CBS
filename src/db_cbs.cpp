@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
     options_tdbastar.outFile = outputFile;
     options_tdbastar.search_timelimit = timeLimit;
     options_tdbastar.cost_delta_factor = 0;
-    // options_tdbastar.delta = cfg["delta_0"].as<float>();
+    options_tdbastar.delta = cfg["delta_0"].as<float>();
     options_tdbastar.fix_seed = 1;
     options_tdbastar.max_motions = cfg["num_primitives_0"].as<size_t>();
     options_tdbastar.rewire = true;
