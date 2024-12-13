@@ -13,13 +13,37 @@ import time
 @dataclass
 class ExecutionTask:
     """Class for keeping track of an item in inventory."""
-    # env: Path
-    # cfg: Path
-    # result_folder: Path
     instance: str
     db_param: list
     trial: int
     timelimit: float
+
+def run_controller(folder, reftrajectory, output, model_path, computeAcc=True, nocableTrack=False):
+    
+    subprocess.run(["python3",
+				"../dynoplan/dynobench/example/test_quad3dpayload_n.py",
+					"-cff", "-w",
+					"--inp", folder / reftrajectory,
+					"--out", folder / output,
+					"--model_path", model_path,
+					# "-a",
+				], env={"PYTHONPATH": "dynoplan/dynobench/:/home/khaledwahba94/coltrans-planning/deps/crazyflie-firmware"}, check=True)
+    
+
+def run_checker(filename_env, filename_result, filename_log):
+	with open(filename_log, 'w') as f:
+		cmd = ["./dynoplan/dynobench/check_trajectory",
+					"--result_file", filename_result,
+					"--env_file", filename_env,
+					"--models_base_path" , "../dynoplan/dynobench/models/",
+					"--goal_tol" , "999",
+					"--u_bound_tol", "0.101",
+					"--col_tol", "0.01"]
+		print(subprocess.list2cmdline(cmd))
+		out = subprocess.run(cmd,
+					stdout=f, stderr=f)
+	return out.returncode == 0
+
 
 
 def run_optimization(result_folder, filename_init, filename_env , result, timelimit):
@@ -32,27 +56,42 @@ def run_optimization(result_folder, filename_init, filename_env , result, timeli
                 "--env_file", str(filename_env),
                 "--models_base_path", "../dynoplan/dynobench/models/",
                 "--solver_id", "1",
-                "--results_file", str(result),
-                "--weight_goal", "300",
-                "--collision_weight", "400"],
-            stdout=logfile, stderr=logfile, timeout=timelimit, check=True)
+                # "--weight_goal", "400",
+                "--time_weight", "-0.01",
+                "--time_ref", "1.5",
+                "--max_iter", "50",
+                "--results_file", str(result),],
+                # "--collision_weight", "400"],
+            stdout=logfile, stderr=logfile, timeout=15*60, check=True)
             return True
     except subprocess.CalledProcessError as e:
         print(f"Error: {e}")
         return False
 
-def visualize_payload(filename_env, output, opt_success=True):
-    if opt_success:
-        output = output.with_suffix(".trajopt.yaml")
+def visualize_payload(filename_env, output, opt_success=True, reference_traj=None, visualize_controller_out=False):
+    if not visualize_controller_out:
+        if opt_success:
+            output = output.with_suffix(".trajopt.yaml")
         output_result = output.with_suffix(".trajopt.html")
-    print("fileoutput to visualize:",output.with_suffix(".trajopt.yaml"))
-    subprocess.run(["python3",
-        "../scripts/visualize_payload.py",
-        "--env", str(filename_env),
-        "--robot", "point",
-        "--result", output,
-        "--output", output_result],
-        check=True)
+
+        print("fileoutput to visualize:",output.with_suffix(".trajopt.yaml"))
+        subprocess.run(["python3",
+            "../scripts/visualize_payload.py",
+            "--env", str(filename_env),
+            "--robot", "point",
+            "--result", output,
+            "--output", output_result],
+            check=True)
+    else:
+        output_result = output.with_suffix(".html")
+        subprocess.run(["python3",
+            "../scripts/visualize_payload.py",    
+			"--env", str(filename_env),
+		 	"--robot", "point",
+			"--result", output,
+			 "--output", output_result,
+			"--ref", str(reference_traj),
+		 ], check=True)
 
 def generate_init_guess(script, path_to_env, path_to_dbcbs, path_to_result,  path_to_payload, num_robots):
 	subprocess.run(["python3",
@@ -123,7 +162,7 @@ def run_dbcbs(filename_env, folder, task, cfg):
                     expansions = results_dbcbs["expansions"]
                     now = time.time()
                     t = now - start
-                    print("success!", t, ", instance:", task.instance, " trial: ", task.trial)                    
+                    print("success!", t, ", instance:", task.instance["name"], " trial: ", task.trial)                    
                     stats.write("  - duration_dbcbs: {}\n".format(t))
                     stats.write("    delta_0: {}\n".format(delta))
                     stats.write("    delta_rate: {}\n".format(delta_rate))
@@ -140,7 +179,7 @@ def execute_task(task: ExecutionTask):
     scripts_path = Path("../scripts")
     results_path = Path("../stats_db")
     example_path = Path().resolve() / "../example"
-    env_path = (example_path / "payload_benchmark/dbcbs" / task.instance).with_suffix(".yaml") 
+    env_path = (example_path / "payload_benchmark/dbcbs" / task.instance["name"]).with_suffix(".yaml") 
     assert(env_path.is_file())
 
     cfg = example_path / "algorithms.yaml" # using single alg.yaml
@@ -149,7 +188,7 @@ def execute_task(task: ExecutionTask):
     with open(cfg) as f:
         cfg = yaml.safe_load(f)
 
-    result_folder = results_path / task.instance / "{:03d}".format(task.trial)
+    result_folder = results_path / task.instance["name"] / "{:03d}".format(task.trial)
     if result_folder.exists():
             print("Warning! {} exists already. Deleting...".format(result_folder))
             shutil.rmtree(result_folder)
@@ -166,18 +205,16 @@ def execute_task(task: ExecutionTask):
     # wildcard matching
     import fnmatch
     for k, v in mycfg.items():
-        if fnmatch.fnmatch(Path(task.instance).name, k):
+        if fnmatch.fnmatch(Path(task.instance["name"]).name, k):
             mycfg = {**mycfg, **v} # merge two dictionaries
 
-    if Path(task.instance).name in mycfg:
-        mycfg_instance = cfg[task.alg][Path(task.instance).name]
+    if Path(task.instance["name"]).name in mycfg:
+        mycfg_instance = cfg[task.alg][Path(task.instance["name"]).name]
         mycfg = {**mycfg, **mycfg_instance} # merge two dictionaries
     print("Using configurations ", mycfg)
     print("---------------------------------------")
     print("Running db-CBS......")
     if(run_dbcbs(str(env_path), str(result_folder), task, mycfg)):
- 
- 
         print("Visualizing db-CBS solution......")
         vis_script = scripts_path / "mesh_visualizer.py"
         path_to_dbcbs_result =  result_folder / "result_dbcbs.yaml"
@@ -206,39 +243,65 @@ def execute_task(task: ExecutionTask):
 
             print("Running optimization......")
             if(run_optimization(result_folder ,path_to_result.with_suffix(".yaml"), str(env_joint_robot_path), result_folder / "output", task.timelimit)):
-                print("Visualizing optimization solution......")
-                visualize_payload(str(env_joint_robot_path), result_folder / "output")
+                # def run_controller(folder, reftrajectory, output, model_path, computeAcc=True, nocableTrack=False):
+                print("Running the controller......\n")
+                
+                run_controller(result_folder, "output.trajopt.yaml", "trajectory_opt.yaml", "../dynoplan/dynobench/models/" + task.instance["model"])
+
+                print("Visualizing the controller output......")
+                visualize_payload(str(env_joint_robot_path), result_folder / "trajectory_opt.yaml", reference_traj=result_folder / "output.trajopt.yaml", visualize_controller_out=True)   
             else:
-                print(f"optimization failed in {task.instance}, trial {task.trial}")
+                print(f"optimization failed in {task.instance['name']}, trial {task.trial}")
                 print("visualizing the unfeasible solution...")
                 visualize_payload(str(env_joint_robot_path), result_folder / "output", opt_success=False)
         else: 
             run_visualize(vis_script, env_path, path_to_dbcbs_result)
     else: 
-        print(f"db-cbs failed in {task.instance}, trial {task.trial}")
+        print(f"db-cbs failed in {task.instance['name']}, trial {task.trial}")
 
 def main():
     parallel = True
     instances = [
-        # "window_2robots",
-        # "window_3robots",
-        # "window_4robots",
-        # "window_5robots",
-        "window_6robots",
+        # {"name": "empty_2robots", "model": "point_2.yaml"},
+        # {"name": "empty_3robots", "model": "point_3.yaml"},
+        # {"name": "empty_4robots", "model": "point_4.yaml"},
+        # {"name": "empty_5robots", "model": "point_5.yaml"},
+        # {"name": "empty_6robots", "model": "point_6.yaml"},
+        # {"name": "window_2robots", "model": "point_2.yaml"},
+        {"name": "window_3robots", "model": "point_3.yaml"},
+        # {"name": "window_4robots", "model": "point_4.yaml"},
+        # {"name": "window_5robots", "model": "point_5.yaml"},
+        # {"name": "window_6robots", "model": "point_6.yaml"},
+        # {"name": "forest_2robots", "model": "point_2.yaml"},
+        # {"name": "forest_3robots", "model": "point_3.yaml"},
+        # {"name": "forest_4robots", "model": "point_4.yaml"},
+        # {"name": "forest_5robots", "model": "point_5.yaml"},
+        # {"name": "forest_6robots", "model": "point_6.yaml"},
     ]
 
+
     db_params = [    
-        # {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 3000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0], "tol": 0.25}},
-        # {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 3000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0], "tol": 0.3}},
-        # {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 3000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0], "tol": 1.5}},
-        {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 3000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0], "tol": 0.5}},
-        # {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 3000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0], "tol": 1.5}},
+        # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
+        # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
+        # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
+        # {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
+        # {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
+        # {"delta_0": 0.7, "delta_rate": 0.9, "num_primitives_0": 800, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-1.0,0,0],  "tol":0.23}},
+        # {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 1000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-1.0,0,0],  "tol":0.23}},
+        # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-1.0,0,0],  "tol":0.5}},
+        # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
+        # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 6000, "num_primitives_rate": 1.5, "heuristic1": "reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-1.0,0,0],  "tol":0.5}},
+        # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
+        {"delta_0": 0.8, "delta_rate": 0.9, "num_primitives_0": 5000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-1.0, 0.0, 0.0],  "tol":0.7}},
+        # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
+        # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
+        # {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":1.7}},
+        # {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":1.7}},
     ] 
 
 
     trials = 1
-    timelimit = 300 # [s]
-
+    timelimit = 350 # [s]
     tasks = []
     for instance, db in zip(instances, db_params):
         for trial in range(trials):
