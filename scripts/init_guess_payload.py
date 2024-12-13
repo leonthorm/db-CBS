@@ -25,6 +25,10 @@ def norm(vec):
     return np.linalg.norm(np.array(vec))
 
 
+def clip_actions(actions, threshold=1.4):
+    # Clip all actions to the threshold value
+    return np.clip(actions, -threshold, threshold)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, help="environment")
@@ -61,8 +65,10 @@ def main():
     robots_actions = []
     for i in range(num_robots):
         robots_states.append(np.array(db_cbs_states["result"][i]["states"]))
-        robots_actions.append(np.array(db_cbs_states["result"][i]["actions"]))
-    # payload states from dbCBS non linear opt
+        action_array = np.array(db_cbs_states["result"][i]["actions"])
+        clipped_action = clip_actions(action_array, threshold=1.2)
+
+        robots_actions.append(clipped_action)
     p0_init = payload_yaml["payload"]
 
     # Determine the maximum number of rows
