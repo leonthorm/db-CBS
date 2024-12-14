@@ -173,7 +173,8 @@ int main(int argc, char *argv[]) {
       std::cout << "tmp envFile: " << tmp_envFile << std::endl;
       // robots become integrator2_3d_res_v0
       get_moving_obstacle(envFile, /*initGuess*/tmpNode.multirobot_trajectory, /*outputFile*/tmp_envFile, max_conflict_cluster_it->first, /*moving_obs*/true, /*res force*/true);
-      feasible = execute_optimizationMetaRobot(tmp_envFile,
+      dynobench::Problem tmp_problem(tmp_envFile);
+      feasible = execute_optimizationMetaRobot(tmp_problem,
                               /*initialGuess*/discrete_search_sol_fa, // always from the discrete search with fa
                               /*solution*/tmpNode.multirobot_trajectory, // update the solution
                               DYNOBENCH_BASE,
@@ -217,12 +218,13 @@ int main(int argc, char *argv[]) {
               }
             }
             std::cout << "nxs: " << multirobot_trajectory.get_nxs().size() << std::endl;
-             std::string joint_opt_envFile = "/tmp/dynoplan/joint_opt_envFile.yaml";
+            std::string joint_opt_envFile = "/tmp/dynoplan/joint_opt_envFile.yaml";
             std::cout << "joint_opt_envFile: " << joint_opt_envFile << std::endl;
             get_moving_obstacle(envFile, /*initGuess*/multirobot_trajectory, /*outputFile*/joint_opt_envFile, 
                         /*cluster*/joint_cluster, /*moving_obs*/false, /*residual force*/true);
             auto joint_optimization_start = std::chrono::high_resolution_clock::now();
-            bool joint_feasible = execute_optimizationMetaRobot(joint_opt_envFile, //all robots with augmented state
+            dynobench::Problem problem(joint_opt_envFile);
+            bool joint_feasible = execute_optimizationMetaRobot(problem, //all robots with augmented state
                                   /*initialGuess*/multirobot_trajectory, //conflict free optimized solution
                                   /*solution*/joint_opt_sol, // expected not to be empty, proper size/no augmentation
                                   DYNOBENCH_BASE,
