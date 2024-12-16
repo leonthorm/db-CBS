@@ -36,13 +36,14 @@ def run_dbecbs(filename_env, folder, timelimit, cfg):
             try:
                 with open("{}/log.txt".format(folder), 'w') as logfile:
                     result = subprocess.run(cmd, timeout=timelimit, stdout=logfile, stderr=logfile) # no use
-                    if(result.returncode != 0 or result.returncode == 0):
-                        if Path(filename_result_dbecbs_opt).exists():
-                            print("db-ecbs success!")
-                        else: 
-                            print("db-ecbs fail!")
-            except:
-                print("Failure!")
+            except subprocess.TimeoutExpired as e:
+                print(f"Command timed out after {timelimit} seconds.")
+                with open(filename_stats, 'r') as file:
+                    stats = yaml.safe_load(file)
+                    if not len(stats["stats"]):
+                        print("db-ecbs fail!")
+                    else: 
+                        print("db-ecbs succees!")
 
 
 
