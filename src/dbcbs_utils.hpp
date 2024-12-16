@@ -677,18 +677,20 @@ void export_solutions_joint(const std::vector<LowLevelPlan<dynobench::Trajectory
   }
 }
 
-void extract_motion_primitives(dynobench::Problem problem,
+void extract_motion_primitives(dynobench::Problem &problem,
                               MultiRobotTrajectory &multi_robot_opt_out,
                               std::map<std::string, std::vector<dynoplan::Motion>> &robot_motions,
-                              const std::vector<std::shared_ptr<dynobench::Model_robot>> &all_robots){
+                              const std::vector<std::shared_ptr<dynobench::Model_robot>> &all_robots,
+                              int len){
   
   size_t robot_idx = 0;
   for(auto robot_trajectory : multi_robot_opt_out.trajectories) {
     int idx = 0;
     int total_actions = robot_trajectory.actions.size();
     while (idx < total_actions){
-      int num_actions = rand() % 11 + 1; // [0-10]
+      int num_actions = rand() % 11 + len; // without len it's < 10
       num_actions = std::min(num_actions, (total_actions - idx));
+      // make sure the left motion primitive has >= 5 length
       if ((total_actions - (idx + num_actions)) < 5 && idx + num_actions < total_actions) {
         num_actions = total_actions - idx;
       }
@@ -702,6 +704,8 @@ void extract_motion_primitives(dynobench::Problem problem,
       for (auto & state : state_vector) {
         state[0] -= first_state[0];
         state[1] -= first_state[1];
+        if(!all_robots[robot_idx]->is_2d) 
+          state[2] -= first_state[2];
       }
       new_trajectory.states = state_vector;
       dynoplan::Motion new_motion;
