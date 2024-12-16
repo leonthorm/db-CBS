@@ -37,6 +37,8 @@ namespace fs = std::filesystem;
 #define REBUILT_FOCAL_LIST
 #define CHECK_FOCAL_LIST
 
+using duration = std::chrono::duration<double>;
+
 int main(int argc, char* argv[]) {
     
     namespace po = boost::program_options;
@@ -45,6 +47,7 @@ int main(int argc, char* argv[]) {
     std::string inputFile;
     std::string outputFile;
     std::string optimizationFile;
+    std::string statsFile;
     std::string cfgFile;
     double timeLimit;
 
@@ -53,6 +56,7 @@ int main(int argc, char* argv[]) {
       ("input,i", po::value<std::string>(&inputFile)->required(), "input file (yaml)")
       ("output,o", po::value<std::string>(&outputFile)->required(), "output file (yaml)")
       ("optimization,opt", po::value<std::string>(&optimizationFile)->required(), "optimization file (yaml)")
+      ("stats,s", po::value<std::string>(&statsFile)->required(), "stats file (yaml)")
       ("cfg,c", po::value<std::string>(&cfgFile)->required(), "configuration file (yaml)")
       ("time_limit,t", po::value<double>(&timeLimit)->required(), "time limit for search");
 
@@ -70,6 +74,15 @@ int main(int argc, char* argv[]) {
       std::cerr << desc << std::endl;
       return 1;
     }
+    create_dir_if_necessary(statsFile);
+    std::ofstream stats(statsFile, std::ios::app);
+    if (!stats) {
+        std::cerr << "Failed to open stats.yaml file.\n";
+        return 1;
+    }
+    auto dbecbs_start = std::chrono::steady_clock::now();
+    duration duration_discrete, duration_opt;
+
     YAML::Node cfg = YAML::LoadFile(cfgFile);
     // cfg = cfg["db-ecbs"]["default"];
     float alpha = cfg["alpha"].as<float>();
@@ -216,7 +229,7 @@ int main(int argc, char* argv[]) {
     double lowest_cost = std::numeric_limits<double>::max();
     YAML::Node itr_cost_data;
     std::string itr_cost_file = output_folder + "/iteration_cost.yaml";
-    bool check_anytime = false;
+    bool check_anytime = true;
 
     if (cfg["heuristic1"].as<std::string>() == "reverse-search"){
       std::map<std::string, std::vector<Motion>> robot_motions_reverse;
@@ -224,7 +237,7 @@ int main(int argc, char* argv[]) {
       options_tdbastar.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
       
       std::cout << "Running the reverse search" << std::endl;
-      auto reverse_start = std::chrono::high_resolution_clock::now();
+      auto reverse_start = std::chrono::steady_clock::now();
       for (const auto &robot : robots){
         // load motions
         if (robot_motions_reverse.find(problem.robotTypes[robot_id]) == robot_motions_reverse.end()){
@@ -251,9 +264,9 @@ int main(int argc, char* argv[]) {
         robot_id++;
       }
 
-      auto reverse_end = std::chrono::high_resolution_clock::now();
-      std::chrono::duration<double> duration = reverse_end - reverse_start;
-      std::cout << "Time taken for the reverse search: " << duration.count() << " seconds" << std::endl;
+      auto reverse_end = std::chrono::steady_clock::now();
+      duration duration_reverse = reverse_end - reverse_start;
+      std::cout << "Time taken for the reverse search: " << duration_reverse.count() << " seconds" << std::endl;
     }
     if (save_search_video){
       std::cout << "***Going to save all intermediate solutions with conflicts!***" << std::endl;
@@ -263,12 +276,13 @@ int main(int argc, char* argv[]) {
     }
     bool solved_db = false;
     std::cout << "Running the main loop" << std::endl;
-    auto discrete_start = std::chrono::high_resolution_clock::now();
+    auto discrete_start = std::chrono::steady_clock::now();
     // main loop
     problem.starts = problem_original.starts; 
     problem.goals = problem_original.goals;
     options_tdbastar.delta = cfg["delta_0"].as<float>();
     options_tdbastar.max_motions = cfg["num_primitives_0"].as<size_t>();
+    stats << "stats: " << "\n";
     for (size_t iteration = 0; ; ++iteration) {
       std::cout << "iteration: " << iteration << std::endl;
       if (iteration > 0) {
@@ -416,9 +430,9 @@ int main(int argc, char* argv[]) {
           create_dir_if_necessary(outputFile);
           std::ofstream out_db(outputFile);
           export_solutions(P.solution, &out_db);
-          auto discrete_end = std::chrono::high_resolution_clock::now();
-          std::chrono::duration<double> duration = discrete_end - discrete_start;
-          std::cout << "Time taken for discrete search: " << duration.count() << " seconds" << std::endl;
+          auto discrete_end = std::chrono::steady_clock::now();
+          duration_discrete = discrete_end - discrete_start;
+          std::cout << "Time taken for discrete search: " << duration_discrete.count() << " seconds" << std::endl;
           // read the discrete search as initial guess for clustered robots ONLY
           MultiRobotTrajectory discrete_search_sol;
           discrete_search_sol.read_from_yaml(outputFile.c_str());
@@ -429,7 +443,7 @@ int main(int argc, char* argv[]) {
             for (size_t i = 0; i < num_robots; ++i) {
                 cluster.insert(i);
             }
-            auto start = std::chrono::high_resolution_clock::now();
+            auto start = std::chrono::steady_clock::now();
             feasible = execute_optimizationMetaRobot(problem, // manually augmented start/foal
                                       /*initialGuess*/discrete_search_sol, 
                                       /*solution*/optimization_sol,
@@ -439,27 +453,36 @@ int main(int argc, char* argv[]) {
                                       residual_force);
             if(feasible){
               std::cout << "Joint optimization is done" << std::endl;
-              auto end = std::chrono::high_resolution_clock::now();
-              std::chrono::duration<double> duration = end - start;
-              std::cout << "Time taken for joint optimization: " << duration.count() << " seconds" << std::endl;
-              // check for lower-bounds
+              auto end = std::chrono::steady_clock::now();
+              duration_opt = end - start;
+              std::cout << "Time taken for joint optimization: " << duration_opt.count() << " seconds" << std::endl;
+              auto now = std::chrono::steady_clock::now();
+              duration t = now - dbecbs_start;
+              // get the optimized solution cost
               cost_tmp = 0;
               for (auto & traj: optimization_sol.trajectories) {
                 cost_tmp += traj.cost;
               }
+              // save into stats
+              stats << "  - t: " << t.count() << "\n";
+              stats << "    cost: " << cost_tmp << "\n";
+              stats << "    duration_tdbastar_eps: "  << duration_discrete.count() << "\n";
+              stats << "    duration_opt: " << duration_opt.count() << "\n";
+              stats.flush(); 
+              // check for lower-bounds
               for (size_t l = 0; l < num_robots; l++){
                 upper_bounds[i] = cost_tmp - (hs_total - hs[i]);
               }
               if (cost_tmp < lowest_cost) {
                 lowest_cost = cost_tmp;
                 optimization_sol.to_yaml_format(optimizationFile.c_str());
-                if(check_anytime){
-                  std::string tmp_File1 = output_folder + "/discrete_" + std::to_string(iteration) + ".yaml";
-                  discrete_search_sol.to_yaml_format(tmp_File1.c_str());
-                  // optimization
-                  std::string tmp_File2 = output_folder + "/optimization_" + std::to_string(iteration) + ".yaml";
-                  optimization_sol.to_yaml_format(tmp_File2.c_str());
-                }
+              }
+              if(check_anytime){
+                std::string tmp_File1 = output_folder + "/discrete_" + std::to_string(iteration) + ".yaml";
+                discrete_search_sol.to_yaml_format(tmp_File1.c_str());
+                // optimization
+                std::string tmp_File2 = output_folder + "/optimization_" + std::to_string(iteration) + ".yaml";
+                optimization_sol.to_yaml_format(tmp_File2.c_str());
               }
               // extract motions from the solution
               extract_motion_primitives(problem, optimization_sol, robot_motions, robots);
@@ -481,7 +504,7 @@ int main(int argc, char* argv[]) {
           // cbs-style/greedy optimization
           if(cfg["execute_greedy_optimization"].as<bool>()){
             // I. Parallel/Independent optimization
-            auto optimization_start = std::chrono::high_resolution_clock::now();
+            auto optimization_start = std::chrono::steady_clock::now();
             std::vector<double> min_ = env["environment"]["min"].as<std::vector<double>>();
             std::vector<double> max_ = env["environment"]["max"].as<std::vector<double>>();
             Options_trajopt options_trajopt;
@@ -581,7 +604,7 @@ int main(int argc, char* argv[]) {
                 if (!getConflicts(tmpNode.multirobot_trajectory.trajectories, robots, col_mng_robots, robot_objs, tmpNode.conflict_matrix)){
                   std::cout << "No inter-robot conflict" << std::endl;
                   // tmpNode.multirobot_trajectory.to_yaml_format(optimizationFile.c_str());
-                  auto optimization_end = std::chrono::high_resolution_clock::now();
+                  auto optimization_end = std::chrono::steady_clock::now();
                   std::chrono::duration<double> opt_duration = optimization_end - optimization_start;
                   std::cout << "Time taken for optimization: " << opt_duration.count() << " seconds" << std::endl;
                   if(!cluster_tracking.empty()){
