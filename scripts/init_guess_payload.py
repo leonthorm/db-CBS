@@ -66,7 +66,7 @@ def main():
     for i in range(num_robots):
         robots_states.append(np.array(db_cbs_states["result"][i]["states"]))
         action_array = np.array(db_cbs_states["result"][i]["actions"])
-        clipped_action = clip_actions(action_array, threshold=1.2)
+        clipped_action = clip_actions(action_array, threshold=1.4)
 
         robots_actions.append(clipped_action)
     p0_init = payload_yaml["payload"]
