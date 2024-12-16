@@ -485,7 +485,7 @@ int main(int argc, char* argv[]) {
                 optimization_sol.to_yaml_format(tmp_File2.c_str());
               }
               // extract motions from the solution
-              extract_motion_primitives(problem, optimization_sol, robot_motions, robots);
+              extract_motion_primitives(problem, optimization_sol, robot_motions, robots, /*length*/15);
               itr_cost_data["runs"].push_back(YAML::Node());
               itr_cost_data["runs"][iteration]["iteration"] = iteration;
               itr_cost_data["runs"][iteration]["lowest_cost"] = lowest_cost;
