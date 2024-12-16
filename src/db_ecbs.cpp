@@ -193,7 +193,15 @@ int main(int argc, char* argv[]) {
     std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>>*> heuristics(num_robots, nullptr);
     std::vector<dynobench::Trajectory> expanded_trajs_tmp;
     std::vector<LowLevelPlan<dynobench::Trajectory>> tmp_solutions(num_robots);
-    
+    std::vector<double> upper_bounds(num_robots, std::numeric_limits<double>::max());
+    std::vector<double> hs(num_robots, -1.0); // start->hScore
+
+    double cost_tmp = 0;
+    double lowest_cost = std::numeric_limits<double>::max();
+    YAML::Node itr_cost_data;
+    std::string itr_cost_file = output_folder + "/iteration_cost.yaml";
+    bool check_anytime = true;
+
     if (cfg["heuristic1"].as<std::string>() == "reverse-search"){
       std::map<std::string, std::vector<Motion>> robot_motions_reverse;
       options_tdbastar.delta = cfg["heuristic1_delta"].as<float>();
@@ -219,7 +227,7 @@ int main(int argc, char* argv[]) {
         options_tdbastar.motions_ptr = &robot_motions_reverse[problem.robotTypes[robot_id]]; 
         tdbastar_epsilon(problem, options_tdbastar, 
                 tmp_solution.trajectory,/*constraints*/{},
-                out_tdb, robot_id, rob_obj_set, /*reverse_search*/true, 
+                out_tdb, robot_id, upper_bounds[robot_id], hs[robot_id], rob_obj_set, /*reverse_search*/true, 
                 expanded_trajs_tmp, tmp_solutions, robot_motions,
                 robots, col_mng_robots, robot_objs,
                 nullptr, &heuristics[robot_id], /*residual_force*/false, options_tdbastar.w);
@@ -284,7 +292,7 @@ int main(int argc, char* argv[]) {
         options_tdbastar.motions_ptr = &robot_motions[problem.robotTypes[robot_id]]; 
         tdbastar_epsilon(problem, options_tdbastar, 
                 start.solution[robot_id].trajectory, start.constraints[robot_id],
-                out_tdb, robot_id, rob_obj_set, /*reverse_search*/false, 
+                out_tdb, robot_id, upper_bounds[robot_id], hs[robot_id], rob_obj_set, /*reverse_search*/false, 
                 expanded_trajs_tmp, tmp_solutions, robot_motions,
                 robots, col_mng_robots, robot_objs,
                 heuristics[robot_id], nullptr, residual_force, options_tdbastar.w);
@@ -297,10 +305,10 @@ int main(int argc, char* argv[]) {
         start.LB += start.solution[robot_id].trajectory.fmin;
         robot_id++;
       }
-      start.focalHeuristic = highLevelfocalHeuristicState(start.solution, robots, problem.robotTypes, col_mng_robots, robot_objs, residual_force); 
       if (!start_node_valid) {
             continue;
       }
+      start.focalHeuristic = highLevelfocalHeuristicState(start.solution, robots, problem.robotTypes, col_mng_robots, robot_objs, residual_force); 
       
       openset_t open;
       focalset_t focal;
@@ -312,7 +320,8 @@ int main(int argc, char* argv[]) {
       
       size_t expands = 0;
       double best_cost = (*handle).cost;
-      
+      // compute the sum of start->hscore, since we don't re-compute heuristics
+      double hs_total = std::accumulate(hs.begin(), hs.end(), 0);
       while (!open.empty()){
 #ifdef REBUILT_FOCAL_LIST 
           focal.clear();
@@ -414,11 +423,42 @@ int main(int argc, char* argv[]) {
                                       residual_force);
             if(feasible){
               std::cout << "Joint optimization is done" << std::endl;
-              optimization_sol.to_yaml_format(optimizationFile.c_str());
               auto end = std::chrono::high_resolution_clock::now();
               std::chrono::duration<double> duration = end - start;
               std::cout << "Time taken for joint optimization: " << duration.count() << " seconds" << std::endl;
-              return 0;
+              // check for lower-bounds
+              cost_tmp = 0;
+              for (auto & traj: optimization_sol.trajectories) {
+                cost_tmp += traj.cost;
+              }
+              for (size_t l = 0; l < num_robots; l++){
+                upper_bounds[i] = cost_tmp - (hs_total - hs[i]);
+              }
+              if (cost_tmp < lowest_cost) {
+                lowest_cost = cost_tmp;
+                optimization_sol.to_yaml_format(optimizationFile.c_str());
+                if(check_anytime){
+                  std::string tmp_File1 = output_folder + "/discrete_" + std::to_string(iteration) + ".yaml";
+                  discrete_search_sol.to_yaml_format(tmp_File1.c_str());
+                  // optimization
+                  std::string tmp_File2 = output_folder + "/optimization_" + std::to_string(iteration) + ".yaml";
+                  optimization_sol.to_yaml_format(tmp_File2.c_str());
+                }
+              }
+              // extract motions from the solution
+              extract_motion_primitives(problem, optimization_sol, robot_motions, robots, /*length*/1);
+              itr_cost_data["runs"].push_back(YAML::Node());
+              itr_cost_data["runs"][iteration]["iteration"] = iteration;
+              itr_cost_data["runs"][iteration]["lowest_cost"] = lowest_cost;
+
+              std::ofstream file(itr_cost_file);
+              if (file.is_open()) {
+                  file << itr_cost_data;
+                  file.close();
+                  std::cout << "Iteration " << iteration << " and the lowest cost " << lowest_cost << std::endl;
+              } else {
+                  std::cerr << "Error: Unable to open file for writing." << std::endl;
+              }
             }
             break; // continue with the next iteration
           }
@@ -595,7 +635,7 @@ int main(int argc, char* argv[]) {
           options_tdbastar.motions_ptr = &robot_motions[problem.robotTypes[tmp_robot_id]]; 
           tdbastar_epsilon(problem, options_tdbastar, 
                 newNode.solution[tmp_robot_id].trajectory, newNode.constraints[tmp_robot_id],
-                tmp_out_tdb, tmp_robot_id, rob_obj_set, /*reverse_search*/false, 
+                tmp_out_tdb, tmp_robot_id, upper_bounds[tmp_robot_id], hs[robot_id], rob_obj_set, /*reverse_search*/false, 
                 expanded_trajs_tmp, newNode.solution, robot_motions,
                 robots, col_mng_robots, robot_objs,
                 heuristics[tmp_robot_id], nullptr, residual_force, options_tdbastar.w, /*run_focal_heuristic*/true);
