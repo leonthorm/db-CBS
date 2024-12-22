@@ -27,7 +27,7 @@ def norm(vec):
 
 def clip_actions(actions, threshold=1.4):
     # Clip all actions to the threshold value
-    return np.clip(actions, -threshold, threshold)
+    return np.clip(actions, 0, threshold)
 
 def main():
     parser = argparse.ArgumentParser()
