@@ -468,6 +468,7 @@ int main(int argc, char* argv[]) {
               stats << "    duration_tdbastar_eps: "  << duration_discrete.count() << "\n";
               stats << "    duration_opt: " << duration_opt.count() << "\n";
               stats.flush(); 
+              return 0;
               // check for lower-bounds
               for (size_t l = 0; l < num_robots; l++){
                 upper_bounds[i] = cost_tmp - (hs_total - hs[i]);
