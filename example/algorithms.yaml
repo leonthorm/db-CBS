@@ -56,19 +56,20 @@ db-ecbs:
   default:
     delta_0: 0.5
     delta_rate: 0.9
-    num_primitives_0: 100
+    num_primitives_0: 200
     num_primitives_rate: 1.5
     alpha: 0.5
     filter_duplicates: True
     heuristic1: "reverse-search"
     heuristic1_delta: 1.0 # 0.5 - for kick problem
     heuristic1_num_primitives_0: 100 # - 2x num_primitves_0 for kick problem
-    suboptimality_factor: 1.3 # 3.3, 2 - if Ellipsoid shape
+    suboptimality_factor: 2 # 1.3, 3.3, 2 - if Ellipsoid shape, drones in general
     always_add_node: False
     rewire: True
     execute_greedy_optimization: False
     execute_joint_optimization: True
-    residual_force: false # NN, augmented state or Ellipsoid shape
+    residual_force: True # NN, augmented state
+    conservative: False # Ellipsoid shape
     save_expanded_trajs: False
   '*_unicycle_sphere':
     delta_0: 0.9

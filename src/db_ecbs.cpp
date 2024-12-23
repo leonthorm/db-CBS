@@ -92,8 +92,8 @@ int main(int argc, char* argv[]) {
     bool save_search_video = false;
     bool save_expanded_trajs = cfg["save_expanded_trajs"].as<bool>();
     std::string conflicts_folder = output_folder + "/conflicts";
-    Eigen::Vector3d radii = Eigen::Vector3d(.12, .12, .3);
     bool residual_force = cfg["residual_force"].as<bool>();
+    bool conservative = cfg["conservative"].as<bool>();
     // optimization-related params
     bool sum_robot_cost = true;
     bool feasible = false;
@@ -190,11 +190,11 @@ int main(int argc, char* argv[]) {
     size_t i = 0;
     std::map<size_t, std::vector<size_t>> rob_obj_set;
     for (const auto &robot : robots){
-      // if(residual_force && robot->name == "Integrator2_3d"){
-      //   collision_geometries.push_back(std::make_shared<fcl::Ellipsoidd>(radii));
-      // }
-      // else
-      collision_geometries.insert(collision_geometries.end(), 
+      if(conservative && robot->name == "Integrator2_3d"){
+        collision_geometries.push_back(std::make_shared<fcl::Ellipsoidd>(Eigen::Vector3d(.12, .12, .3)));
+      }
+      else
+        collision_geometries.insert(collision_geometries.end(), 
                               robot->collision_geometries.begin(), robot->collision_geometries.end());
       auto robot_obj = new fcl::CollisionObject(collision_geometries[col_geom_id]);
       collision_geometries[col_geom_id]->setUserData((void*)i);
@@ -339,7 +339,6 @@ int main(int argc, char* argv[]) {
             continue;
       }
       start.focalHeuristic = highLevelfocalHeuristicState(start.solution, robots, problem.robotTypes, col_mng_robots, robot_objs, residual_force); 
-      
       openset_t open;
       focalset_t focal;
 
