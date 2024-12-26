@@ -141,7 +141,7 @@ struct cableShapes {
         } else if (startsWith(robot_name, "unicycle")) {
             for (size_t i=0; i < num_robots-1; ++i) {
                 std::shared_ptr<fcl::CollisionGeometryd> cablegeom;
-                cablegeom.reset(new fcl::Boxd(0.8*l[i],0.01, 0.01));
+                cablegeom.reset(new fcl::Boxd(0.6*0.5,0.01, 0.01));
                 cablegeom->setUserData((void*) i);
                 auto cableco = new fcl::CollisionObject(cablegeom);
                 cableco->computeAABB();
@@ -395,17 +395,15 @@ bool getEarliestConflict(
                     Eigen::Vector3d robot0_state =  pi[i].cast<double>();
                     Eigen::Vector3d robot1_state =   pi[i+1].cast<double>();
                     Eigen::Vector2d robot0_pos   =  robot0_state.segment(0, 2);
-                    double alpha0                = robot0_state(2);
                     Eigen::Vector2d robot1_pos   =  robot1_state.segment(0, 2);
-                    double alpha1                = robot1_state(2);
                     
                     Eigen::Vector2d qi((robot1_pos - robot0_pos).normalized());
-                    double cable_l = (robot1_pos - robot0_pos).norm();
-                    Eigen::Vector2d cable_pos = robot0_pos + 0.5*0.5*qi;
+                    double rod_l = (robot1_pos - robot0_pos).norm();
+                    Eigen::Vector2d cable_pos = robot0_pos + 0.5*rod_l*qi; // rod length is updated
 
                     double thi = atan2(qi[1], qi[0]);
 
-                    std::shared_ptr<fcl::CollisionGeometryd> cablegeom(new fcl::Boxd(0.6*0.5,0.05,0.05)); //0.35 * length of cable, size of the  
+                    std::shared_ptr<fcl::CollisionGeometryd> cablegeom(new fcl::Boxd(0.6*rod_l,0.01,0.01)); //0.6 * length of rod  
                     cablegeom->setUserData((void*) i);
                     auto cableco = new fcl::CollisionObject(cablegeom);
 
@@ -432,28 +430,38 @@ bool getEarliestConflict(
                 cables.col_mgr_cables->collide( &cable_cable_collision_data,
                                         fcl::DefaultCollisionFunction<double>);
 
-                if (cable_collision_data.result.isCollision() || cable_cable_collision_data.result.isCollision()) {
+                // if (cable_collision_data.result.isCollision() || cable_cable_collision_data.result.isCollision()) {
+                if (cable_collision_data.result.isCollision()) {
 
                     early_conflict.time = t * all_robots[0]->ref_dt;
-                    if (cable_cable_collision_data.result.isCollision()) {
-                        std::cout << "cable/cable collision exists: " << cable_cable_collision_data.result.isCollision()<< std::endl;
-                        const auto& contact = cable_cable_collision_data.result.getContact(0);
-                        early_conflict.robot_idx_i = (size_t)contact.o1->getUserData();
-                        early_conflict.robot_state_i = node_states[early_conflict.robot_idx_i];
-                        early_conflict.robot_idx_j = (size_t)contact.o2->getUserData();
-                        early_conflict.robot_state_j = node_states[early_conflict.robot_idx_j];
-                        std::cout << "cable id 1:" << (size_t)contact.o1->getUserData() << std::endl;
-                        std::cout << "cable id 2:" << (size_t)contact.o2->getUserData() << std::endl;
+                    // if (cable_cable_collision_data.result.isCollision()) { // cable/cable conflict
+                    //     std::cout << "cable/cable collision exists: " << cable_cable_collision_data.result.isCollision()<< std::endl;
+                    //     const auto& contact = cable_cable_collision_data.result.getContact(0);
+                    //     early_conflict.robot_idx_i = (size_t)contact.o1->getUserData();
+                    //     early_conflict.robot_state_i = node_states[early_conflict.robot_idx_i];
+                    //     early_conflict.robot_idx_j = (size_t)contact.o2->getUserData();
+                    //     early_conflict.robot_state_j = node_states[early_conflict.robot_idx_j];
+                    //     std::cout << "robot i: " << node_states[early_conflict.robot_idx_i] << std::endl;
+                    //     std::cout << "robot j: " << node_states[early_conflict.robot_idx_j] << std::endl;
+                    //     std::cout << "cable id 1:" << (size_t)contact.o1->getUserData() << std::endl;
+                    //     std::cout << "cable id 2:" << (size_t)contact.o2->getUserData() << std::endl;
 
-                    } else {
-                        std::cout << "cable/env collision exists: " << cable_collision_data.result.isCollision()  << std::endl;
-                        const auto& contact = cable_collision_data.result.getContact(0);
-                        early_conflict.robot_idx_i = (size_t)contact.o1->getUserData();
-                        early_conflict.robot_state_i = node_states[early_conflict.robot_idx_i];
-                        early_conflict.robot_idx_j = 99;
-                        std::cout << "cable id 1:" << (size_t)contact.o1->getUserData() << std::endl;
+                    // } else { // cable/env conflict
+                    //     std::cout << "cable/env collision exists: " << cable_collision_data.result.isCollision()  << std::endl;
+                    //     const auto& contact = cable_collision_data.result.getContact(0);
+                    //     early_conflict.robot_idx_i = (size_t)contact.o1->getUserData();
+                    //     early_conflict.robot_state_i = node_states[early_conflict.robot_idx_i];
+                    //     early_conflict.robot_idx_j = 99;
+                    //     std::cout << "cable id 1:" << (size_t)contact.o1->getUserData() << std::endl;
 
-                    }
+                    // }
+                    std::cout << "cable/env collision exists: " << cable_collision_data.result.isCollision()  << std::endl;
+                    const auto& contact = cable_collision_data.result.getContact(0);
+                    early_conflict.robot_idx_i = (size_t)contact.o1->getUserData();
+                    early_conflict.robot_state_i = node_states[early_conflict.robot_idx_i];
+                    early_conflict.robot_idx_j = 99;
+                    std::cout << "cable id 1:" << (size_t)contact.o1->getUserData() << std::endl;
+
                     assert(early_conflict.robot_idx_i != early_conflict.robot_idx_j);
                     return true;
                 }
