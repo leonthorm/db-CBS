@@ -70,12 +70,13 @@ def visualize(env_file, result_file, video_file, reference_traj):
             l = 0.5
             px_prev = px1
             py_prev = py1
-            for i in range(1,num_robots):
-                alpha    = state[3 + i - 1]
-                th_cable = state[3 + num_robots - 1 + i - 1]
+            for i in range(num_robots-1):
+                alpha    = state[2 + i + 1]
+                th_cable = state[2 + num_robots + i]
                 px_prev = px_prev + l*np.cos(th_cable)
                 py_prev = py_prev + l*np.sin(th_cable)
-                frame[f"unicycle{i}"].set_transform(
+                # print("px py alpha", alpha)
+                frame[f"unicycle{i+1}"].set_transform(
                     tf.translation_matrix([px_prev, py_prev, 0]).dot(
                         tf.quaternion_matrix(tf.quaternion_from_euler(0, 0, alpha))
                     )
@@ -89,7 +90,7 @@ def visualize(env_file, result_file, video_file, reference_traj):
                 px_prev = px_prev + l*np.cos(th_cable)
                 py_prev = py_prev + l*np.sin(th_cable)
 
-                # print("th_cable: ",3 + num_robots - 1 + i - 1, th_cable, px_prev_cable, py_prev_cable)
+                # print("th_cable: ",th_cable)
                 frame[f"cable{i}"].set_transform(
                     tf.translation_matrix([px_prev_cable, py_prev_cable, 0]).dot(
                         tf.quaternion_matrix(tf.quaternion_from_euler(0, 0, th_cable))

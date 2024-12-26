@@ -29,6 +29,12 @@ DnametoColor = {
 }
 
 
+def normalize(vec):
+    norm_v = np.linalg.norm(vec)
+    if norm_v > 0:
+        return np.array(vec)/norm_v
+    else: 
+        raise ValueError("Cannot normalize a zero vector.")
 
 def visualize(env_file, result_file, video_file, payload_file=None):
     vis = meshcat.Visualizer()
@@ -84,10 +90,16 @@ def visualize(env_file, result_file, video_file, payload_file=None):
       elif "unicycle" in data["robots"][0]["type"]:
         vis["unicycle" + str(name_robot)].set_object(g.Mesh(g.Box([0.1, 0.05, 0.05]), material=g.MeshLambertMaterial(color=list(DnametoColor.items())[name_robot][1])))
       name_robot+=1
+    
+    # for i in range(len(states) - 1):
+    #     vis[f"rod{i}"].set_object(
+    #         g.Mesh(g.Box([0.6*0.5, 0.01, 0.01]), g.MeshLambertMaterial(color=0x000000))
+    #     )
 
-
-    max_k = len(max(states))
-
+    max_k = 0
+    for state in states: 
+      if len(state) > max_k:
+        max_k = len(state)
     for k in range(max_k):
       for l in range(len(states)): # for each robot
         with anim.at_frame(vis, k) as frame:
@@ -102,6 +114,28 @@ def visualize(env_file, result_file, video_file, payload_file=None):
           elif "unicycle" in data["robots"][0]["type"]:
             frame["unicycle" + str(l)].set_transform(tf.translation_matrix([robot_state[0], robot_state[1], 0]).dot(
                 tf.quaternion_matrix(tf.quaternion_from_euler(0,0,robot_state[2]))))
+
+
+
+            # Add rods between robots
+            if l < len(states) - 1:
+                next_robot_state = states[l + 1][k] if k < len(states[l + 1]) else states[l + 1][-1]
+                pos1 = np.array([robot_state[0], robot_state[1]])
+                pos2 = np.array([next_robot_state[0], next_robot_state[1]])
+                rod_length = np.linalg.norm(pos2 - pos1)
+                rod_angle = np.arctan2(pos2[1] - pos1[1], pos2[0] - pos1[0])
+                
+                rod_center = pos1 + 0.5 * rod_length * normalize(pos2-pos1)
+                vis[f"rod{l}"].set_object(
+                    g.Mesh(g.Box([0.6*rod_length, 0.01, 0.01]), g.MeshLambertMaterial(color=0x000000))
+                )
+
+
+                frame[f"rod{l}"].set_transform(
+                    tf.translation_matrix([rod_center[0], rod_center[1], 0]).dot(
+                        tf.quaternion_matrix(tf.quaternion_from_euler(0, 0, rod_angle))
+                    )
+                )
 
           if draw_payload:
             frame["payload"].set_transform(tf.translation_matrix(pstates[k,0:3]).dot(tf.quaternion_matrix([1,0,0,0])))
