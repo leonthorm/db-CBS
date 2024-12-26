@@ -7,6 +7,9 @@ from pathlib import Path
 import subprocess
 
 
+np.set_printoptions(linewidth=np.inf)
+np.set_printoptions(suppress=True)
+
 #### This script generates the init guess from the plan of the two single robots to the joint robot
 #### moreover, it saves an html file for the meshcat animation of this init guess
 
@@ -82,17 +85,11 @@ def main():
         for j in range(num_robots - 1):
             pi = padded_robot_states[j][i]
             pi_next = padded_robot_states[j + 1][i]
-
-            # Compute directional vector and theta
-            # if j % 2 == 0:
-            #     u = pi[0:2] - pi_next[0:2] 
-            # else:
             u = pi_next[0:2] - pi[0:2] 
             th = np.arctan2(u[1], u[0])
             
             # Add theta to the joint states
             unicycles_joint_states[i, 2 + num_robots + j] = th
-
     # Save the result to a YAML file
     result_yaml = dict()
     result_yaml["result"] = dict()
@@ -102,10 +99,11 @@ def main():
     result_yaml["result"]["num_states"] = len(unicycles_joint_states.tolist())
 
     saveyaml(path_to_result, result_yaml)
-
     # Optional visualization setup
     script = "../scripts/visualize_unicycles.py"
     subprocess.run(["python3", script, "--robot", "point", "--env", path_to_env, "--result", path_to_result, "--output", html_path])
+    print(html_path)
+    print(path_to_result)
 
 
 if __name__ == "__main__":
