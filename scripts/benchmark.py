@@ -122,8 +122,8 @@ def execute_task(task: ExecutionTask):
 	else:
 		vis_script = scripts_path / "visualize.py"
 
-	for file in visualize_files:
-		run_visualize(vis_script, env, result_folder / file)
+	# for file in visualize_files:
+		# run_visualize(vis_script, env, result_folder / file)
 	
 	# search_viz_script = scripts_path / "visualize_search.py"
 	# if(len(search_plot_files) > 0):
@@ -209,7 +209,7 @@ def main():
 		"db-ecbs",
 	]
 	trials = 1 
-	timelimit = 30*60 
+	timelimit = 60*60 
 
 	tasks = []
 	for instance in instances:
@@ -227,20 +227,20 @@ def main():
 		for task in tasks:
 			execute_task(task)
 	
-	# run_benchmark_stats(instances, algs, trials, timelimit)
-	# write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit)
+	run_benchmark_stats(instances, algs, trials, timelimit)
+	write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit)
 	
-	# subprocess.run(
-		# ['pdftk',
-		#  Path("../results") / 'table.pdf',
-		#  Path("../results") / 'stats.pdf',
-		#  'cat', 'output',
-		#  Path("../results") / 'results.pdf'
-		# ]
-	# )
+	subprocess.run(
+		['pdftk',
+		 Path("../results") / 'table.pdf',
+		 Path("../results") / 'stats.pdf',
+		 'cat', 'output',
+		 Path("../results") / 'results.pdf'
+		]
+	)
 	# delete temp files
-	# (Path("../results") / 'table.pdf').unlink()
-	# (Path("../results") / 'stats.pdf').unlink()
+	(Path("../results") / 'table.pdf').unlink()
+	(Path("../results") / 'stats.pdf').unlink()
 
 	# paper_tables.write_table1(trials, timelimit)
 	# paper_tables.write_table2(trials, timelimit)

@@ -144,6 +144,7 @@ int main(int argc, char* argv[]) {
         else
           robotType = "integrator2_3d_res_v0";
         // manually add the f to the state
+        problem.robotType = robotType; // for drone1c case
         problem.starts.at(robot_id).conservativeResize(problem.starts.at(robot_id).size() + 1);
         problem.starts.at(robot_id)(problem.starts.at(robot_id).size() - 1) = 0; 
         problem.goals.at(robot_id).conservativeResize(problem.goals.at(robot_id).size() + 1);
