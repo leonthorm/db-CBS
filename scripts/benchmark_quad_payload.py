@@ -27,7 +27,7 @@ def run_controller(folder, reftrajectory, output, model_path, computeAcc=True, n
 					"--out", folder / output,
 					"--model_path", model_path,
 					# "-a",
-				], env={"PYTHONPATH": "dynoplan/dynobench/:/home/khaledwahba94/coltrans-planning/deps/crazyflie-firmware"}, check=True)
+				], env={"PYTHONPATH": "dynoplan/dynobench/:/home/khaledwahba94/imrc/payload-uavs-planner/coltrans-planning/deps/crazyflie-firmware"}, check=True)
     
 
 def run_checker(filename_env, filename_result, filename_log):
@@ -56,12 +56,12 @@ def run_optimization(result_folder, filename_init, filename_env , result, timeli
                 "--env_file", str(filename_env),
                 "--models_base_path", "../dynoplan/dynobench/models/",
                 "--solver_id", "1",
-                # "--weight_goal", "400",
-                "--time_weight", "-0.01",
-                "--time_ref", "1.5",
+                "--weight_goal", "200",
+                # "--time_weight", "-0.01",
+                # "--time_ref", "1.5",
                 "--max_iter", "50",
-                "--results_file", str(result),],
-                # "--collision_weight", "400"],
+                "--results_file", str(result),
+                "--collision_weight", "500."],
             stdout=logfile, stderr=logfile, timeout=15*60, check=True)
             return True
     except subprocess.CalledProcessError as e:
@@ -92,6 +92,32 @@ def visualize_payload(filename_env, output, opt_success=True, reference_traj=Non
 			 "--output", output_result,
 			"--ref", str(reference_traj),
 		 ], check=True)
+
+def visualize_unicycles(filename_env, output, opt_success=True, reference_traj=None, visualize_controller_out=False):
+    if not visualize_controller_out:
+        if opt_success:
+            output = output.with_suffix(".trajopt.yaml")
+        output_result = output.with_suffix(".trajopt.html")
+
+        print("fileoutput to visualize:",output.with_suffix(".trajopt.yaml"))
+        subprocess.run(["python3",
+            "../scripts/visualize_unicycles.py",
+            "--env", str(filename_env),
+            "--robot", "unicycle",
+            "--result", output,
+            "--output", output_result],
+            check=True)
+    else:
+        output_result = output.with_suffix(".html")
+        subprocess.run(["python3",
+            "../scripts/visualize_unicycles.py",    
+			"--env", str(filename_env),
+		 	"--robot", "unicycle",
+			"--result", output,
+			 "--output", output_result,
+			"--ref", str(reference_traj),
+		 ], check=True)
+
 
 def generate_init_guess(script, path_to_env, path_to_dbcbs, path_to_result,  path_to_payload, num_robots):
 	subprocess.run(["python3",
@@ -139,7 +165,6 @@ def run_dbcbs(filename_env, folder, task, cfg):
             filename_result_dbcbs_joint = Path(folder) / "dbcbs_joint.yaml"
             filename_result_dbcbs_opt = Path(folder) / "result_dbcbs_opt.yaml"
             t_dbcbs_start = time.time()
-
             cmd = ["./db_cbs", 
                 "-i", filename_env,
                 "-o", filename_result_dbcbs,
@@ -178,11 +203,13 @@ def run_dbcbs(filename_env, folder, task, cfg):
 def execute_task(task: ExecutionTask):
     scripts_path = Path("../scripts")
     results_path = Path("../stats_db")
-    example_path = Path().resolve() / "../example"
-    env_path = (example_path / "payload_benchmark/dbcbs" / task.instance["name"]).with_suffix(".yaml") 
+    cfg_path = Path().resolve() / "../example"
+    example_path = Path("../dynoplan/dynobench/envs")
+
+    env_path = (example_path / "benchmark_planners/dbcbs" / task.instance["name"]).with_suffix(".yaml") 
     assert(env_path.is_file())
 
-    cfg = example_path / "algorithms.yaml" # using single alg.yaml
+    cfg = cfg_path / "algorithms.yaml" # using single alg.yaml
     assert(cfg.is_file())
 
     with open(cfg) as f:
@@ -222,13 +249,11 @@ def execute_task(task: ExecutionTask):
         if (path_to_payload.exists()):
             run_visualize(vis_script, env_path, path_to_dbcbs_result, path_to_payload)
         
-            init_guess_script = scripts_path / "init_guess_payload.py"
             with open(env_path) as f:
                 env_dict = yaml.safe_load(f)
 
             env_joint_robot = {"environment": env_dict["environment"], "robots": list()}
             env_joint_robot["robots"].append(env_dict["joint_robot"][0])
-            # exit()
 
             env_joint_robot_path = result_folder / "env.yaml"
 
@@ -238,22 +263,42 @@ def execute_task(task: ExecutionTask):
             
             print("Generating initial guess from db-CBS solution and visualizing it......")
             num_robots = env_dict["joint_robot"][0]["quadsNum"]
+            robot_type = env_dict["joint_robot"][0]["type"]
+            if "point" in robot_type:
+                init_guess_script = scripts_path / "init_guess_payload.py"
+            elif "unicycle" in robot_type:
+                init_guess_script = scripts_path / "init_guess_unicycles.py"
+                path_to_payload = None
+                path_to_result =  path_to_result = result_folder / "init_guess_unicycles"
             generate_init_guess(init_guess_script, str(env_joint_robot_path), str(path_to_dbcbs_result), path_to_result, str(path_to_payload), num_robots)
             
 
             print("Running optimization......")
             if(run_optimization(result_folder ,path_to_result.with_suffix(".yaml"), str(env_joint_robot_path), result_folder / "output", task.timelimit)):
                 # def run_controller(folder, reftrajectory, output, model_path, computeAcc=True, nocableTrack=False):
-                print("Running the controller......\n")
-                
-                run_controller(result_folder, "output.trajopt.yaml", "trajectory_opt.yaml", "../dynoplan/dynobench/models/" + task.instance["model"])
+                if "point" in robot_type:
+                    print("Running the controller......\n")
+                    
+                    run_controller(result_folder, "output.trajopt.yaml", "trajectory_opt.yaml", "../dynoplan/dynobench/models/" + task.instance["model"])
 
-                print("Visualizing the controller output......")
-                visualize_payload(str(env_joint_robot_path), result_folder / "trajectory_opt.yaml", reference_traj=result_folder / "output.trajopt.yaml", visualize_controller_out=True)   
+                    print("Visualizing the controller output......")
+                    visualize_payload(str(env_joint_robot_path), result_folder / "trajectory_opt.yaml", reference_traj=result_folder / "output.trajopt.yaml", visualize_controller_out=True)   
+                elif "unicycle" in robot_type:
+
+                    visualize_unicycles(str(env_joint_robot_path), result_folder / "output.trajopt.yaml", reference_traj=result_folder / "output.trajopt.yaml", visualize_controller_out=True)   
+
+
             else:
-                print(f"optimization failed in {task.instance['name']}, trial {task.trial}")
-                print("visualizing the unfeasible solution...")
-                visualize_payload(str(env_joint_robot_path), result_folder / "output", opt_success=False)
+                if "point" in robot_type:
+    
+                    print(f"optimization failed in {task.instance['name']}, trial {task.trial}")
+                    print("visualizing the unfeasible solution...")
+                    
+                    visualize_payload(str(env_joint_robot_path), result_folder / "output", opt_success=False)
+  
+                elif "unicycle" in robot_type:
+                    visualize_unicycles(str(env_joint_robot_path), result_folder / "output",reference_traj=None, opt_success=False, visualize_controller_out=False)
+  
         else: 
             run_visualize(vis_script, env_path, path_to_dbcbs_result)
     else: 
@@ -267,18 +312,33 @@ def main():
         # {"name": "empty_4robots", "model": "point_4.yaml"},
         # {"name": "empty_5robots", "model": "point_5.yaml"},
         # {"name": "empty_6robots", "model": "point_6.yaml"},
+       
         # {"name": "window_2robots", "model": "point_2.yaml"},
-        {"name": "window_3robots", "model": "point_3.yaml"},
+        # {"name": "window_3robots", "model": "point_3.yaml"},
         # {"name": "window_4robots", "model": "point_4.yaml"},
         # {"name": "window_5robots", "model": "point_5.yaml"},
         # {"name": "window_6robots", "model": "point_6.yaml"},
+       
         # {"name": "forest_2robots", "model": "point_2.yaml"},
         # {"name": "forest_3robots", "model": "point_3.yaml"},
         # {"name": "forest_4robots", "model": "point_4.yaml"},
         # {"name": "forest_5robots", "model": "point_5.yaml"},
         # {"name": "forest_6robots", "model": "point_6.yaml"},
-    ]
+ 
+        {"name": "window_2robots_unicycle", "model": "unicyclesWithRods_2.yaml"},
+        {"name": "window_3robots_unicycle", "model": "unicyclesWithRods_3.yaml"},
+        {"name": "window_4robots_unicycle", "model": "unicyclesWithRods_4.yaml"},
+        {"name": "window_5robots_unicycle", "model": "unicyclesWithRods_5.yaml"},
+        {"name": "window_6robots_unicycle", "model": "unicyclesWithRods_6.yaml"},
 
+        # {"name": "forest_2robots_unicycle", "model": "unicyclesWithRods_2.yaml"},
+        # {"name": "forest_3robots_unicycle", "model": "unicyclesWithRods_3.yaml"},
+        # {"name": "forest_4robots_unicycle", "model": "unicyclesWithRods_4.yaml"},
+        # {"name": "forest_5robots_unicycle", "model": "unicyclesWithRods_5.yaml"},
+        # {"name": "forest_6robots_unicycle", "model": "unicyclesWithRods_6.yaml"},
+
+        # {"name": "lego_3robots_unicycle", "model": "unicyclesWithRods_3.yaml"},
+    ]
 
     db_params = [    
         # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
@@ -286,21 +346,38 @@ def main():
         # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
         # {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
         # {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
+        
         # {"delta_0": 0.7, "delta_rate": 0.9, "num_primitives_0": 800, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-1.0,0,0],  "tol":0.23}},
         # {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 1000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-1.0,0,0],  "tol":0.23}},
         # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-1.0,0,0],  "tol":0.5}},
         # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
         # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 6000, "num_primitives_rate": 1.5, "heuristic1": "reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-1.0,0,0],  "tol":0.5}},
-        # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
-        {"delta_0": 0.8, "delta_rate": 0.9, "num_primitives_0": 5000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-1.0, 0.0, 0.0],  "tol":0.7}},
+        
+        # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-1.0,0,0],  "tol":0.25}},
+        # {"delta_0": 0.8, "delta_rate": 0.9, "num_primitives_0": 5000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [0.0, -1.0, 0.0],  "tol":0.7}},
         # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
         # {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":0.5}},
         # {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":1.7}},
-        # {"delta_0": 0.9, "delta_rate": 0.9, "num_primitives_0": 4500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "p0_init_guess": [-0.5,0,0],  "tol":1.7}},
+    
+
+        {"delta_0": 0.15, "delta_rate": 0.9, "num_primitives_0": 500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True,  "tol": 0.25}},  # window_2robots
+        {"delta_0": 0.25, "delta_rate": 0.9, "num_primitives_0": 500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True,  "tol": 0.35}},  # window_3robots
+        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 1000,  "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True,  "tol": 0.35}},  # window_4robots
+        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 1000,  "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True,  "tol": 0.35}},  # window_5robots
+        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 1000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True,  "tol": 0.35}}, # window_6robots
+        
+        # {"delta_0": 0.25, "delta_rate": 0.9, "num_primitives_0": 5000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True,  "tol": 0.3}}, # forest_2robots
+        # {"delta_0": 0.25, "delta_rate": 0.9, "num_primitives_0": 5000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True,  "tol": 0.3}},  # forest_3robots
+        # {"delta_0": 0.25, "delta_rate": 0.9, "num_primitives_0": 5000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True,  "tol": 0.3}},  # forest_4robots
+        # {"delta_0": 0.25, "delta_rate": 0.9, "num_primitives_0": 5000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True,  "tol": 0.3}},  # forest_5robots
+        # {"delta_0": 0.25, "delta_rate": 0.9, "num_primitives_0": 5000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True,  "tol": 0.3}},  # forest_6robots
+
+        # {"delta_0": 0.15, "delta_rate": 0.9, "num_primitives_0": 600, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True,  "tol": 0.25}}, # lego_3_robots
+
     ] 
 
 
-    trials = 1
+    trials = 3
     timelimit = 350 # [s]
     tasks = []
     for instance, db in zip(instances, db_params):
@@ -308,7 +385,7 @@ def main():
             tasks.append(ExecutionTask(instance, db, trial, timelimit))
 
     if parallel and len(tasks) > 1:
-        use_cpus = psutil.cpu_count(logical=False)-1
+        use_cpus = psutil.cpu_count(logical=False) - 1
         print("Using {} CPUs".format(use_cpus))
         with mp.Pool(use_cpus) as p:
             for _ in tqdm.tqdm(p.imap_unordered(execute_task, tasks)):

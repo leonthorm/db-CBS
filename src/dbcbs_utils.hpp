@@ -121,22 +121,57 @@ struct cableShapes {
         std::vector<fcl::CollisionObjectd*> cablesObj;
         std::vector<fcl::CollisionObjectd*> robotsObj;
         std::shared_ptr<fcl::BroadPhaseCollisionManagerd> col_mgr_cables;
+        // std::shared_ptr<fcl::BroadPhaseCollisionManagerd> col_mgr_robots;
         std::vector<size_t> robot_indices;
 
-    void addCableShapes(const size_t& num_robots, const std::vector<double>& l) {
+    void addCableShapes(const size_t& num_robots, const std::vector<double>& l, std::string& robot_name) {
         col_mgr_cables = std::make_shared<fcl::DynamicAABBTreeCollisionManagerd>();
+        // col_mgr_robots = std::make_shared<fcl::DynamicAABBTreeCollisionManagerd>();
         cablesObj.clear();
-        for (size_t i=0; i < num_robots; ++i) {
-            std::shared_ptr<fcl::CollisionGeometryd> cablegeom;
-            cablegeom.reset(new fcl::Capsuled(0.01, l[i]));
-            cablegeom->setUserData((void*) i);
-            auto cableco = new fcl::CollisionObject(cablegeom);
-            cableco->computeAABB();
-            cablesObj.push_back(cableco);
+        robotsObj.clear();
+        if (startsWith(robot_name, "quad3d")) {
+            for (size_t i=0; i < num_robots; ++i) {
+                std::shared_ptr<fcl::CollisionGeometryd> cablegeom;
+                cablegeom.reset(new fcl::Capsuled(0.01, l[i]));
+                cablegeom->setUserData((void*) i);
+                auto cableco = new fcl::CollisionObject(cablegeom);
+                cableco->computeAABB();
+                cablesObj.push_back(cableco);
+            }
+        } else if (startsWith(robot_name, "unicycle")) {
+            for (size_t i=0; i < num_robots-1; ++i) {
+                std::shared_ptr<fcl::CollisionGeometryd> cablegeom;
+                cablegeom.reset(new fcl::Boxd(0.6*0.5,0.01, 0.01));
+                cablegeom->setUserData((void*) i);
+                auto cableco = new fcl::CollisionObject(cablegeom);
+                cableco->computeAABB();
+                cablesObj.push_back(cableco);
 
+
+                // std::shared_ptr<fcl::CollisionGeometryd> robotgeom_0;               
+                // robotgeom_0.reset(new fcl::Boxd(0.1, 0.05, 0.05));
+                // robotgeom_0->setUserData((void*) i);
+                // auto robot0co = new fcl::CollisionObject(robotgeom_0);
+                // robot0co->computeAABB();
+                // robotsObj.push_back(robot0co);
+                // if (i == num_robots-2) {
+                //     std::shared_ptr<fcl::CollisionGeometryd> robotgeom_1;
+                //     robotgeom_1.reset(new fcl::Boxd(0.1, 0.05, 0.05));
+                //     robotgeom_1->setUserData((void*) i+1);
+                //     auto robot1co = new fcl::CollisionObject(robotgeom_1);
+                //     robot1co->computeAABB();
+                //     robotsObj.push_back(robot1co);
+                // }
+
+            }
         }
+    
+        // col_mgr_robots->registerObjects(robotsObj);
+        // col_mgr_robots->setup();
         col_mgr_cables->registerObjects(cablesObj);
         col_mgr_cables->setup();
+
+
     }
 };
 
@@ -187,7 +222,7 @@ bool getEarliestConflict(
     for (size_t i = 0; i < all_robots.size();++i) {
         cable_lengths.push_back(0.5);
     }
-    cables.addCableShapes(all_robots.size(), cable_lengths);
+    cables.addCableShapes(all_robots.size(), cable_lengths, all_robots[0]->name);
     Eigen::VectorXf p0_init_guess = create_vector(p0_init_guess_std);
 
     for (size_t t = 0; t <= max_t; ++t){
@@ -247,90 +282,197 @@ bool getEarliestConflict(
             return true;
         } 
         if (solve_p0) {
-            size_t dim = 3;
-            double mu = 0.18;
-            double lambda = 1.;
-            std::vector<Eigen::VectorXf> pi;
-            std::vector<double> li;
-            for (const auto& robot_obj : robot_objs) {
-                Eigen::Vector3f robot_pos = robot_obj->getTranslation().cast<float>();
-                pi.push_back(create_vector({robot_pos(0), robot_pos(1), robot_pos(2)}));
-                li.push_back(0.5);
-            }
-            cost_data data {pi, li, mu, lambda, p0_init_guess}; // prepare the data for the opt
-            optimizePayload(p0_opt, dim, p0_init_guess, data);
-            p0_init_guess << p0_opt(0), p0_opt(1), p0_opt(2);
-            size_t robot_counter = 0;
-            for (const auto& p : pi) {
-                float distance = (p - p0_opt).norm();
-                double tol = abs(distance - li[robot_counter]);
-                if (tol > max_tol) {
-                    std::cout << "robot_id: "<< robot_counter << ", tol: " << tol  << std::endl;
-                    std::cout << "p: \n" << pi[robot_counter] << "\np0: \n" << p0_opt << std::endl;
+            if (startsWith(all_robots[0]->name, "quad3d")) { // Assuming Homogenous robot team
+                size_t dim = 3;
+                double mu = 0.18;
+                double lambda = 1.;
+                std::vector<Eigen::VectorXf> pi;
+                std::vector<double> li;
+                for (const auto& robot_obj : robot_objs) {
+                    Eigen::Vector3f robot_pos = robot_obj->getTranslation().cast<float>();
+                    pi.push_back(create_vector({robot_pos(0), robot_pos(1), robot_pos(2)}));
+                    li.push_back(0.5); // TODO: this needs to be provided as an input
+                }
+                cost_data data {pi, li, mu, lambda, p0_init_guess}; // prepare the data for the opt
+                optimizePayload(p0_opt, dim, p0_init_guess, data);
+                p0_init_guess << p0_opt(0), p0_opt(1), p0_opt(2);
+                size_t robot_counter = 0;
+                for (const auto& p : pi) {
+                    float distance = (p - p0_opt).norm();
+                    double tol = abs(distance - li[robot_counter]);
+                    if (tol > max_tol) {
+                        std::cout << "robot_id: "<< robot_counter << ", tol: " << tol  << std::endl;
+                        std::cout << "p: \n" << pi[robot_counter] << "\np0: \n" << p0_opt << std::endl;
+                        early_conflict.time = t * all_robots[0]->ref_dt;
+                        early_conflict.robot_idx_i = robot_counter; 
+                        early_conflict.robot_state_i = node_states[early_conflict.robot_idx_i];
+                        std::cout << "CONFLICT at time " << t*all_robots[0]->ref_dt << " " << early_conflict.robot_idx_i << std::endl;
+                        early_conflict.robot_idx_j = 99;
+                        // early_conflict.robot_state_j = node_states[early_conflict.robot_idx_j];
+                        assert(early_conflict.robot_idx_i != early_conflict.robot_idx_j);
+                        return true;
+                    }
+                ++robot_counter;
+                }
+                // artificial cables collision checker
+                // creates a conflict if the artificial cable is in collision with an obstacle in the environment
+                // The length of the cable is adjusted based on the position of the robot and the 
+                // optimized payload position. 
+                size_t num_robots = all_robots.size(); 
+                cables.cablesObj.clear();
+                for (size_t i=0; i < num_robots; ++i) {
+                    Eigen::Vector3d qi = (p0_opt.cast<double>() - pi[i].cast<double>()).normalized(); 
+                    double cable_l =  (p0_opt.cast<double>() - pi[i].cast<double>()).norm();
+                    std::shared_ptr<fcl::CollisionGeometryd> cablegeom(new fcl::Capsuled(0.01, cable_l)); //length of cable + diameter of robot (radius = 0.1m)
+                    cablegeom->setUserData((void*) i);
+                    auto cableco = new fcl::CollisionObject(cablegeom);
+                    Eigen::Vector3d cable_pos = p0_opt.cast<double>() - 0.5*cable_l*qi;
+                    Eigen::Vector3d from(0., 0., -1.);
+                    Eigen::Vector4d cable_quat(Eigen::Quaternion<double>::FromTwoVectors(from, qi).coeffs());
+                    
+                    fcl::Transform3d result;
+                    result = Eigen::Translation<double, 3>(cable_pos);
+                    result.rotate(Eigen::Quaterniond(cable_quat));
+                    
+                    cables.cablesObj.push_back(cableco);
+                    cables.cablesObj[i]->setTransform(result);
+                    cables.cablesObj[i]->computeAABB();                
+
+                }
+
+                cables.col_mgr_cables->clear();
+                cables.col_mgr_cables->registerObjects(cables.cablesObj);
+                cables.col_mgr_cables->setup();
+                cables.col_mgr_cables->update(cables.cablesObj);
+                fcl::DefaultCollisionData<double> cable_collision_data;
+
+                cables.col_mgr_cables->collide(all_robots[0]->env.get(), &cable_collision_data,
+                                        fcl::DefaultCollisionFunction<double>);
+
+                if (cable_collision_data.result.isCollision()) {
+                    const auto& contact = cable_collision_data.result.getContact(0);
+                    std::cout << "cable collision exists: \n" << "cables: " <<  cable_collision_data.result.isCollision()  << std::endl;
                     early_conflict.time = t * all_robots[0]->ref_dt;
-                    early_conflict.robot_idx_i = robot_counter; 
-                    early_conflict.robot_state_i = node_states[early_conflict.robot_idx_i];
-                    std::cout << "CONFLICT at time " << t*all_robots[0]->ref_dt << " " << early_conflict.robot_idx_i << std::endl;
+                    early_conflict.robot_idx_i = (size_t)contact.o1->getUserData();
                     early_conflict.robot_idx_j = 99;
-                    // early_conflict.robot_state_j = node_states[early_conflict.robot_idx_j];
+                    std::cout << "cable id 1:" << (size_t)contact.o1->getUserData() << std::endl;
+                    std::cout << "cable id 2:" << (size_t)contact.o2->getUserData() << std::endl;
+                    assert(early_conflict.robot_idx_i != early_conflict.robot_idx_j);
+                    early_conflict.robot_state_i = node_states[early_conflict.robot_idx_i];
+                    return true;
+                }
+                p0_tmp.push_back(p0_opt);        
+            } else if (startsWith(all_robots[0]->name, "unicycle")) {
+                std::vector<Eigen::VectorXf> pi;
+                std::vector<double> li;
+
+                for (const auto& robot_obj : robot_objs) {
+                    Eigen::Vector3f robot_pos = robot_obj->getTranslation().cast<float>();
+                    pi.push_back(create_vector({robot_pos(0), robot_pos(1), 0}));
+                    li.push_back(0.5); // TODO: this needs to be provided as an input
+                }
+
+                size_t num_robots = all_robots.size(); 
+                for (size_t i=0; i < num_robots-1; ++i) {
+                    double distance1 = (pi[i+1] - pi[i]).norm();
+                    double tol1 = abs(distance1 - 0.5); // Length of cable is assumed to be 0.5
+                    std::cout << "tol: " << tol1  << std::endl;
+                    if (tol1 > max_tol) {
+                        early_conflict.time = t * all_robots[0]->ref_dt;
+                        early_conflict.robot_idx_i = i; 
+                        early_conflict.robot_state_i = node_states[early_conflict.robot_idx_i];
+                        std::cout << "CONFLICT at time joint system: " << t*all_robots[0]->ref_dt << " " << early_conflict.robot_idx_i << std::endl;
+                        early_conflict.robot_idx_j = i+1;
+                        early_conflict.robot_state_j = node_states[early_conflict.robot_idx_j];
+                        assert(early_conflict.robot_idx_i != early_conflict.robot_idx_j);
+                        return true;
+                    }
+                }
+                cables.cablesObj.clear();
+                cables.robotsObj.clear();
+                for (size_t i = 0; i < num_robots-1; ++i) {
+                    
+                    Eigen::Vector3d robot0_state =  pi[i].cast<double>();
+                    Eigen::Vector3d robot1_state =   pi[i+1].cast<double>();
+                    Eigen::Vector2d robot0_pos   =  robot0_state.segment(0, 2);
+                    Eigen::Vector2d robot1_pos   =  robot1_state.segment(0, 2);
+                    
+                    Eigen::Vector2d qi((robot1_pos - robot0_pos).normalized());
+                    double rod_l = (robot1_pos - robot0_pos).norm();
+                    Eigen::Vector2d cable_pos = robot0_pos + 0.5*rod_l*qi; // rod length is updated
+
+                    double thi = atan2(qi[1], qi[0]);
+
+                    std::shared_ptr<fcl::CollisionGeometryd> cablegeom(new fcl::Boxd(0.6*rod_l,0.01,0.01)); //0.6 * length of rod  
+                    cablegeom->setUserData((void*) i);
+                    auto cableco = new fcl::CollisionObject(cablegeom);
+
+                    fcl::Transform3d result;                    
+                    result = Eigen::Translation<double, 3>(Eigen::Vector3d(cable_pos(0), cable_pos(1), 0.));
+                    result.rotate(Eigen::AngleAxisd(thi, Eigen::Vector3d::UnitZ()));
+                    
+                    cables.cablesObj.push_back(cableco);
+                    cables.cablesObj[i]->setTransform(result);
+                    cables.cablesObj[i]->computeAABB();                
+
+                }
+
+                cables.col_mgr_cables->clear();
+                cables.col_mgr_cables->registerObjects(cables.cablesObj);
+                cables.col_mgr_cables->setup();
+                cables.col_mgr_cables->update(cables.cablesObj);
+                fcl::DefaultCollisionData<double> cable_collision_data;
+                fcl::DefaultCollisionData<double> cable_cable_collision_data;
+
+                cables.col_mgr_cables->collide(all_robots[0]->env.get(), &cable_collision_data,
+                                        fcl::DefaultCollisionFunction<double>);
+
+                cables.col_mgr_cables->collide( &cable_cable_collision_data,
+                                        fcl::DefaultCollisionFunction<double>);
+
+                // if (cable_collision_data.result.isCollision() || cable_cable_collision_data.result.isCollision()) {
+                if (cable_collision_data.result.isCollision()) {
+
+                    early_conflict.time = t * all_robots[0]->ref_dt;
+                    // if (cable_cable_collision_data.result.isCollision()) { // cable/cable conflict
+                    //     std::cout << "cable/cable collision exists: " << cable_cable_collision_data.result.isCollision()<< std::endl;
+                    //     const auto& contact = cable_cable_collision_data.result.getContact(0);
+                    //     early_conflict.robot_idx_i = (size_t)contact.o1->getUserData();
+                    //     early_conflict.robot_state_i = node_states[early_conflict.robot_idx_i];
+                    //     early_conflict.robot_idx_j = (size_t)contact.o2->getUserData();
+                    //     early_conflict.robot_state_j = node_states[early_conflict.robot_idx_j];
+                    //     std::cout << "robot i: " << node_states[early_conflict.robot_idx_i] << std::endl;
+                    //     std::cout << "robot j: " << node_states[early_conflict.robot_idx_j] << std::endl;
+                    //     std::cout << "cable id 1:" << (size_t)contact.o1->getUserData() << std::endl;
+                    //     std::cout << "cable id 2:" << (size_t)contact.o2->getUserData() << std::endl;
+
+                    // } else { // cable/env conflict
+                    //     std::cout << "cable/env collision exists: " << cable_collision_data.result.isCollision()  << std::endl;
+                    //     const auto& contact = cable_collision_data.result.getContact(0);
+                    //     early_conflict.robot_idx_i = (size_t)contact.o1->getUserData();
+                    //     early_conflict.robot_state_i = node_states[early_conflict.robot_idx_i];
+                    //     early_conflict.robot_idx_j = 99;
+                    //     std::cout << "cable id 1:" << (size_t)contact.o1->getUserData() << std::endl;
+
+                    // }
+                    std::cout << "cable/env collision exists: " << cable_collision_data.result.isCollision()  << std::endl;
+                    const auto& contact = cable_collision_data.result.getContact(0);
+                    early_conflict.robot_idx_i = (size_t)contact.o1->getUserData();
+                    early_conflict.robot_state_i = node_states[early_conflict.robot_idx_i];
+                    early_conflict.robot_idx_j = 99;
+                    std::cout << "cable id 1:" << (size_t)contact.o1->getUserData() << std::endl;
+
                     assert(early_conflict.robot_idx_i != early_conflict.robot_idx_j);
                     return true;
                 }
-            ++robot_counter;
             }
-            // artificial cables collision checker
-            // creates a conflict if the artificial cable is in collision with an obstacle in the environment
-            // The length of the cable is adjusted based on the position of the robot and the 
-            // optimized payload position. 
-            size_t num_robots = all_robots.size(); 
-            cables.cablesObj.clear();
-            for (size_t i=0; i < num_robots; ++i) {
-                Eigen::Vector3d qi = (p0_opt.cast<double>() - pi[i].cast<double>()).normalized(); 
-                double cable_l =  (p0_opt.cast<double>() - pi[i].cast<double>()).norm();
-                std::shared_ptr<fcl::CollisionGeometryd> cablegeom(new fcl::Capsuled(0.01, cable_l)); //length of cable + diameter of robot (radius = 0.1m)
-                cablegeom->setUserData((void*) i);
-                auto cableco = new fcl::CollisionObject(cablegeom);
-                Eigen::Vector3d cable_pos = p0_opt.cast<double>() - 0.5*cable_l*qi;
-                Eigen::Vector3d from(0., 0., -1.);
-                Eigen::Vector4d cable_quat(Eigen::Quaternion<double>::FromTwoVectors(from, qi).coeffs());
-                
-                fcl::Transform3d result;
-                result = Eigen::Translation<double, 3>(cable_pos);
-                result.rotate(Eigen::Quaterniond(cable_quat));
-                
-                cables.cablesObj.push_back(cableco);
-                cables.cablesObj[i]->setTransform(result);
-                cables.cablesObj[i]->computeAABB();                
-
-            }
-
-            cables.col_mgr_cables->clear();
-            cables.col_mgr_cables->registerObjects(cables.cablesObj);
-            cables.col_mgr_cables->setup();
-            cables.col_mgr_cables->update(cables.cablesObj);
-            fcl::DefaultCollisionData<double> cable_collision_data;
-
-            cables.col_mgr_cables->collide(all_robots[0]->env.get(), &cable_collision_data,
-                                     fcl::DefaultCollisionFunction<double>);
-
-            if (cable_collision_data.result.isCollision()) {
-                const auto& contact = cable_collision_data.result.getContact(0);
-                std::cout << "cable collision exists: \n" << "cables: " <<  cable_collision_data.result.isCollision()  << std::endl;
-                early_conflict.time = t * all_robots[0]->ref_dt;
-                early_conflict.robot_idx_i = (size_t)contact.o1->getUserData();
-                early_conflict.robot_idx_j = 99;
-                std::cout << "cable id 1:" << (size_t)contact.o1->getUserData() << std::endl;
-                std::cout << "cable id 2:" << (size_t)contact.o2->getUserData() << std::endl;
-                assert(early_conflict.robot_idx_i != early_conflict.robot_idx_j);
-                early_conflict.robot_state_i = node_states[early_conflict.robot_idx_i];
-                return true;
-            }
-            p0_tmp.push_back(p0_opt);        
         }
     }
     if (solve_p0) {
-        for (const auto& p0i : p0_tmp) {
-            p0_sol.push_back(p0i);
+        if (startsWith(all_robots[0]->name, "quad3d")) {
+            for (const auto& p0i : p0_tmp) {
+                p0_sol.push_back(p0i);
+            }
         }
     }
     return false;
