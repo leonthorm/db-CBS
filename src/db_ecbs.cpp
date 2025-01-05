@@ -131,18 +131,35 @@ int main(int argc, char* argv[]) {
         fcl::Vector3f(env_min[0].as<double>(),
         env_min[1].as<double>(),-1),
         fcl::Vector3f(env_max[0].as<double>(), env_max[1].as<double>(), 1));
-
+    size_t robot_id = 0;
     std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
-    // std::vector<dynobench::Trajectory> ll_trajs;
     std::string motionsFile;
     std::vector<std::string> all_motionsFile;
+
+    if(residual_force){ // considers only integrator2_3d dynamics
+      std::vector<double> _start, _goal;
+      for(auto &robotType : problem.robotTypes){
+        if (robotType == "integrator2_3d_large_v0")
+          robotType = "integrator2_3d_res_large_v0";
+        else
+          robotType = "integrator2_3d_res_v0";
+        // manually add the f to the state
+        problem.starts.at(robot_id).conservativeResize(problem.starts.at(robot_id).size() + 1);
+        problem.starts.at(robot_id)(problem.starts.at(robot_id).size() - 1) = 0; 
+        problem.goals.at(robot_id).conservativeResize(problem.goals.at(robot_id).size() + 1);
+        problem.goals.at(robot_id)(problem.goals.at(robot_id).size() - 1) = 0; 
+        // problem.start, problem.goal need to change for joint-optimization
+        std::vector<double> tmp_vec1(problem.starts.at(robot_id).data(), problem.starts.at(robot_id).data() + problem.starts.at(robot_id).size());
+        _start.insert(_start.end(), tmp_vec1.begin(), tmp_vec1.end());
+        std::vector<double> tmp_vec2(problem.goals.at(robot_id).data(), problem.goals.at(robot_id).data() + problem.goals.at(robot_id).size());
+        _goal.insert(_goal.end(), tmp_vec2.begin(), tmp_vec2.end());
+        ++robot_id;
+      }
+      problem.start = Eigen::VectorXd::Map(_start.data(), _start.size());
+      problem.goal = Eigen::VectorXd::Map(_goal.data(), _goal.size());
+    }
+
     for (auto &robotType : problem.robotTypes){
-        if(residual_force){ // considers only integrator2_3d dynamics
-          if (robotType == "integrator2_3d_large_v0")
-            robotType = "integrator2_3d_res_large_v0";
-          else
-            robotType = "integrator2_3d_res_v0";
-        }
         std::shared_ptr<dynobench::Model_robot> robot = dynobench::robot_factory(
                 (problem.models_base_path + robotType + ".yaml").c_str(), problem.p_lb, problem.p_ub);
         robots.push_back(robot);
@@ -200,7 +217,7 @@ int main(int argc, char* argv[]) {
       i++;
     }
     col_mng_robots->registerObjects(robot_objs);
-    size_t robot_id = 0;
+    robot_id = 0;
     size_t num_robots = robots.size();
     std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>>*> heuristics(num_robots, nullptr);
     std::vector<dynobench::Trajectory> expanded_trajs_tmp;
@@ -427,7 +444,7 @@ int main(int argc, char* argv[]) {
                 cluster.insert(i);
             }
             auto start = std::chrono::steady_clock::now();
-            feasible = execute_optimizationMetaRobot(inputFile,
+            feasible = execute_optimizationMetaRobot(problem, // inputFile
                                       /*initialGuess*/discrete_search_sol, 
                                       /*solution*/optimization_sol,
                                       DYNOBENCH_BASE,
@@ -458,6 +475,7 @@ int main(int argc, char* argv[]) {
                 stats << "    duration_tdbastar_eps: "  << duration_discrete.count() << "\n";
                 stats << "    duration_opt: " << duration_opt.count() << "\n";
                 stats.flush(); 
+                return 0;
                 if(check_anytime){
                   std::string tmp_File1 = output_folder + "/discrete_" + std::to_string(iteration) + ".yaml";
                   discrete_search_sol.to_yaml_format(tmp_File1.c_str());
@@ -568,7 +586,8 @@ int main(int argc, char* argv[]) {
               std::cout << "tmp envFile: " << tmp_envFile << std::endl;
               get_moving_obstacle(inputFile, /*initGuess*/tmpNode.multirobot_trajectory, /*outputFile*/tmp_envFile, 
                                 max_conflict_cluster_it->first, /*moving_obs*/moving_obstacles, residual_force);
-              feasible = execute_optimizationMetaRobot(tmp_envFile,
+              dynobench::Problem tmp_problem(tmp_envFile);
+              feasible = execute_optimizationMetaRobot(tmp_problem,
                                       /*initialGuess*/discrete_search_sol, // can be discrete search
                                       /*solution*/tmpNode.multirobot_trajectory, // update the solution
                                       DYNOBENCH_BASE,
