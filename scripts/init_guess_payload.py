@@ -100,7 +100,7 @@ def main():
     result_yaml["result"]["num_action"] = len(actions.tolist())
     result_yaml["result"]["num_states"] = len(payload_states.tolist())
 
-    saveyaml(path_to_result, result_yaml)
+    # saveyaml(path_to_result, result_yaml)
 
     if args.joint_robot_env is None:
         with open(path_to_env) as f:
@@ -115,7 +115,7 @@ def main():
         env_joint_robot["robots"][0]["goal"]  = env_dict["joint_robot"][0]["goal"]
         new_path_to_env = re.sub(r'[^/]+\.yaml$', 'env.yaml', path_to_env)
     
-        saveyaml(new_path_to_env, env_joint_robot)
+        # saveyaml(new_path_to_env, env_joint_robot)
     else:
         with open(args.joint_robot_env) as f:
             env_joint_robot = yaml.safe_load(f)
