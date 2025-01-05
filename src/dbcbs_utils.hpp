@@ -260,6 +260,7 @@ bool getEarliestViolations(
       involved_robots.clear(); // for each robot
       rho = 0; // for each robot 
       state1 = states.at(i);
+      nn_reset(); // reset for each robot
       for (size_t j = 0; j < solution.size(); ++j){
         if (i != j) { // fa for each robot coming from neighbors
           state2 = states.at(j);
@@ -270,7 +271,6 @@ bool getEarliestViolations(
               static_cast<float>(dist(0)), static_cast<float>(dist(1)),
               static_cast<float>(dist(2)), static_cast<float>(dist(3)),
               static_cast<float>(dist(4)), static_cast<float>(dist(5))};
-            nn_reset();
             const auto nnType = (robot_types[j] == "integrator2_3d_large_v0")
                                   ? NN_ROBOT_LARGE
                                   : NN_ROBOT_SMALL;
