@@ -200,7 +200,7 @@ int main(int argc, char* argv[]) {
     double lowest_cost = std::numeric_limits<double>::max();
     YAML::Node itr_cost_data;
     std::string itr_cost_file = output_folder + "/iteration_cost.yaml";
-    bool check_anytime = true;
+    bool check_anytime = false;
 
     if (cfg["heuristic1"].as<std::string>() == "reverse-search"){
       std::map<std::string, std::vector<Motion>> robot_motions_reverse;
@@ -437,6 +437,7 @@ int main(int argc, char* argv[]) {
               if (cost_tmp < lowest_cost) {
                 lowest_cost = cost_tmp;
                 optimization_sol.to_yaml_format(optimizationFile.c_str());
+                return 0;
                 if(check_anytime){
                   std::string tmp_File1 = output_folder + "/discrete_" + std::to_string(iteration) + ".yaml";
                   discrete_search_sol.to_yaml_format(tmp_File1.c_str());
