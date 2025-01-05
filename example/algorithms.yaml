@@ -83,4 +83,9 @@ db-ecbs:
     num_primitives_0: 300 # alcove unicycle needs
   '*_unicycle2':
     num_primitives_0: 100
+  '*_kink':
+    delta_0: 0.75
+    num_primitives_0: 50 
+    heuristic1_delta: 0.5
+    heuristic1_num_primitives_0: 100
 
