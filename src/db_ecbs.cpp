@@ -17,6 +17,7 @@
 #include "dynoplan/tdbastar/tdbastar.hpp"
 #include "dynoplan/tdbastar/tdbastar_epsilon.hpp"
 #include "dynoplan/tdbastar/planresult.hpp"
+#include "dynoplan/ompl/robots.h"
 #include <dynobench/multirobot_trajectory.hpp>
 
 // DYNOBENCH
@@ -29,6 +30,7 @@
 #include "fcl/broadphase/broadphase_collision_manager.h"
 #include <fcl/fcl.h>
 #include "dbcbs_utils.hpp"
+
 
 using namespace dynoplan;
 namespace fs = std::filesystem;
@@ -180,7 +182,8 @@ int main(int argc, char* argv[]) {
         }
         all_motionsFile.push_back(motionsFile);
     }
-    std::map<std::string, std::vector<Motion>> robot_motions;
+    std::map<std::string, std::vector<Motion>> robot_motions; // all motions
+    std::map<std::string, std::vector<Motion>> sub_motions; // used for the search
     // allocate data for conflict checking, check for conflicts
     std::vector<fcl::CollisionObjectd*> robot_objs;
     std::shared_ptr<fcl::BroadPhaseCollisionManagerd> col_mng_robots;
@@ -190,11 +193,11 @@ int main(int argc, char* argv[]) {
     size_t i = 0;
     std::map<size_t, std::vector<size_t>> rob_obj_set;
     for (const auto &robot : robots){
-      // if(residual_force && robot->name == "Integrator2_3d"){
-      //   collision_geometries.push_back(std::make_shared<fcl::Ellipsoidd>(radii));
-      // }
-      // else
-      collision_geometries.insert(collision_geometries.end(), 
+      if(cfg["conservative"].as<bool>()){
+        collision_geometries.push_back(std::make_shared<fcl::Ellipsoidd>(radii));
+      }
+      else
+        collision_geometries.insert(collision_geometries.end(), 
                               robot->collision_geometries.begin(), robot->collision_geometries.end());
       auto robot_obj = new fcl::CollisionObject(collision_geometries[col_geom_id]);
       collision_geometries[col_geom_id]->setUserData((void*)i);
@@ -202,8 +205,10 @@ int main(int argc, char* argv[]) {
       if (robot_motions.find(problem.robotTypes[i]) == robot_motions.end()){
           options_tdbastar.motionsFile = all_motionsFile[i];
           load_motion_primitives_new(options_tdbastar.motionsFile, *robot, robot_motions[problem.robotTypes[i]], 
-                                      options_tdbastar.max_motions,
+                                      /*options_tdbastar.max_motions*/1e6,
                                       options_tdbastar.cut_actions, false, options_tdbastar.check_cols);
+           // get the needed submotions for the search part
+          motion_to_motion(robot_motions[problem.robotTypes[i]], sub_motions[problem.robotTypes[i]], *robot, options_tdbastar.max_motions);
       }
       rob_obj_set[i].push_back(col_geom_id);
       if (robot->name == "car_with_trailers") {
@@ -229,7 +234,7 @@ int main(int argc, char* argv[]) {
     double lowest_cost = std::numeric_limits<double>::max();
     YAML::Node itr_cost_data;
     std::string itr_cost_file = output_folder + "/iteration_cost.yaml";
-    bool check_anytime = false;
+    bool check_anytime = true;
 
     if (cfg["heuristic1"].as<std::string>() == "reverse-search"){
       std::map<std::string, std::vector<Motion>> robot_motions_reverse;
@@ -257,7 +262,7 @@ int main(int argc, char* argv[]) {
         tdbastar_epsilon(problem, options_tdbastar, 
                 tmp_solution.trajectory,/*constraints*/{},
                 out_tdb, robot_id, upper_bounds[robot_id], hs[robot_id], rob_obj_set, /*reverse_search*/true, 
-                expanded_trajs_tmp, tmp_solutions, robot_motions,
+                expanded_trajs_tmp, tmp_solutions,
                 robots, col_mng_robots, robot_objs,
                 nullptr, &heuristics[robot_id], /*residual_force*/false, options_tdbastar.w);
         std::cout << "computed heuristic with " << heuristics[robot_id]->size() << " entries." << std::endl;
@@ -287,22 +292,30 @@ int main(int argc, char* argv[]) {
       std::cout << "iteration: " << iteration << std::endl;
       if (iteration > 0) {
         if (solved_db) {
-            options_tdbastar.delta *= cfg["delta_0"].as<float>();
-        } else {
-            options_tdbastar.delta *= 0.99;
+          options_tdbastar.delta *= cfg["delta_0"].as<float>();
+        } 
+        else {
+          options_tdbastar.delta *= 0.99;
+          options_tdbastar.max_motions *= cfg["num_primitives_rate"].as<float>();
+          options_tdbastar.max_motions = std::min<size_t>(options_tdbastar.max_motions, 1e6);
+          for (auto& iter : robot_motions){
+            for (size_t i = 0; i < problem.robotTypes.size(); ++i){
+              if (iter.first == problem.robotTypes[i]){
+                motion_to_motion(robot_motions[problem.robotTypes[i]], sub_motions[problem.robotTypes[i]], *robots[i], options_tdbastar.max_motions);
+              }
+            }
+          }
         }
-        options_tdbastar.max_motions *= cfg["num_primitives_rate"].as<float>();
-        options_tdbastar.max_motions = std::min<size_t>(options_tdbastar.max_motions, 1e6);
       }
       // disable/enable motions 
-      for (auto& iter : robot_motions) {
-          for (size_t i = 0; i < problem.robotTypes.size(); ++i) {
-              if (iter.first == problem.robotTypes[i]) {
-                  disable_motions(robots[i], problem.robotTypes[i], options_tdbastar.delta, filter_duplicates, alpha, 
-                                  options_tdbastar.max_motions, iter.second);
-                  break;
-              }
+      for (auto& iter : sub_motions) {
+        for (size_t i = 0; i < problem.robotTypes.size(); ++i) {
+          if (iter.first == problem.robotTypes[i]) {
+            disable_motions(robots[i], problem.robotTypes[i], options_tdbastar.delta, filter_duplicates, alpha, 
+                            options_tdbastar.max_motions, iter.second);
+            break;
           }
+        }
       }
       solved_db = false;
       HighLevelNodeFocal start;
@@ -319,11 +332,11 @@ int main(int argc, char* argv[]) {
       std::cout << "Node ID is " << id << ", root" << std::endl;
       for (const auto &robot : robots){
         expanded_trajs_tmp.clear();
-        options_tdbastar.motions_ptr = &robot_motions[problem.robotTypes[robot_id]]; 
+        options_tdbastar.motions_ptr = &sub_motions[problem.robotTypes[robot_id]]; 
         tdbastar_epsilon(problem, options_tdbastar, 
                 start.solution[robot_id].trajectory, start.constraints[robot_id],
                 out_tdb, robot_id, upper_bounds[robot_id], hs[robot_id], rob_obj_set, /*reverse_search*/false, 
-                expanded_trajs_tmp, tmp_solutions, robot_motions,
+                expanded_trajs_tmp, tmp_solutions,
                 robots, col_mng_robots, robot_objs,
                 heuristics[robot_id], nullptr, residual_force, options_tdbastar.w);
         if(!out_tdb.solved){
@@ -475,7 +488,7 @@ int main(int argc, char* argv[]) {
                 stats << "    duration_tdbastar_eps: "  << duration_discrete.count() << "\n";
                 stats << "    duration_opt: " << duration_opt.count() << "\n";
                 stats.flush(); 
-                return 0;
+                // return 0;
                 if(check_anytime){
                   std::string tmp_File1 = output_folder + "/discrete_" + std::to_string(iteration) + ".yaml";
                   discrete_search_sol.to_yaml_format(tmp_File1.c_str());
@@ -485,7 +498,7 @@ int main(int argc, char* argv[]) {
                 }
               }
               // extract motions from the solution
-              extract_motion_primitives(problem, optimization_sol, robot_motions, robots, /*length*/1);
+              extract_motion_primitives(problem, optimization_sol, sub_motions, robots, /*length*/1);
               itr_cost_data["runs"].push_back(YAML::Node());
               itr_cost_data["runs"][iteration]["iteration"] = iteration;
               itr_cost_data["runs"][iteration]["lowest_cost"] = lowest_cost;
@@ -499,6 +512,7 @@ int main(int argc, char* argv[]) {
                   std::cerr << "Error: Unable to open file for writing." << std::endl;
               }
             }
+            std::cout << "optimization failed, new iteration" << std::endl;
             break; // continue with the next iteration
           }
           // cbs-style/greedy optimization
@@ -672,11 +686,11 @@ int main(int argc, char* argv[]) {
           newNode.LB -= newNode.solution[tmp_robot_id].trajectory.fmin;
           Out_info_tdb tmp_out_tdb; 
           expanded_trajs_tmp.clear();
-          options_tdbastar.motions_ptr = &robot_motions[problem.robotTypes[tmp_robot_id]]; 
+          options_tdbastar.motions_ptr = &sub_motions[problem.robotTypes[tmp_robot_id]]; 
           tdbastar_epsilon(problem, options_tdbastar, 
                 newNode.solution[tmp_robot_id].trajectory, newNode.constraints[tmp_robot_id],
                 tmp_out_tdb, tmp_robot_id, upper_bounds[tmp_robot_id], hs[robot_id], rob_obj_set, /*reverse_search*/false, 
-                expanded_trajs_tmp, newNode.solution, robot_motions,
+                expanded_trajs_tmp, newNode.solution,
                 robots, col_mng_robots, robot_objs,
                 heuristics[tmp_robot_id], nullptr, residual_force, options_tdbastar.w, /*run_focal_heuristic*/true);
           if (tmp_out_tdb.solved){
