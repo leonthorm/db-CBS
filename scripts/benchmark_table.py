@@ -131,6 +131,8 @@ def get_alg_name(alg_key):
 		"k-cbs": "k-CBS",
 		"db-cbs": "db-CBS",
 		"db-ecbs": "db-ECBS",
+		"ellipsoid": "db-ECBS-E",
+		"residual": "db-ECBS-R"
 	}
 
 	if alg_key in mapping:

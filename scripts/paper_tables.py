@@ -2,6 +2,8 @@ from pathlib import Path
 
 import benchmark_table
 from benchmark_table import write_table
+import os
+import shutil
 
 def write_table1(trials, timelimit):
 	instances = [
@@ -263,13 +265,51 @@ def write_table5(trials, timelimit):
 
 	benchmark_table.gen_pdf(output_path)
 
+# for Ellipsoid vs. residual, when each run has been done separately,
+# and the final format has ellipsoid/instances, residual/instances
+def write_table6(trials, timelimit, result_path):
+	instances = [
+		"drone1c",
+		"drone2c",
+		"drone4c",
+		"drone8c",
+		"drone10c",
+	]
+	algs = [
+		"ellipsoid",
+		"residual",
+	]
+	tmp_path = result_path + "/tmp_result"
+	os.makedirs(tmp_path, exist_ok=True)
+	for ins in instances: 
+		for alg in algs:
+			tmp_folder = tmp_path + "/" + ins + "/" + alg
+			os.makedirs(tmp_folder, exist_ok=True)
+			src_folder = result_path + "/" + alg + "/" + ins
+			shutil.copytree(src_folder, tmp_folder, dirs_exist_ok=True)
+
+	write_table(instances, algs, Path(tmp_path), "paper_table2.pdf", trials, timelimit)
+	# copy the pdf, latex and delete the tmp folder
+	for item in os.listdir(tmp_path):
+		# Check if the item starts with the base name
+		if item.startswith("paper_table2"):
+			src_path = os.path.join(tmp_path, item)
+			dest_path = os.path.join(result_path, item)
+			# Copy the file
+			shutil.copy2(src_path, dest_path)
+			print(f"Copied '{src_path}' to '{dest_path}'.")
+	# delete the folder
+	shutil.rmtree(tmp_path)
+
 if __name__ == '__main__':
 	trials = 1
-	timelimit = 5*60
-	write_table1(trials, timelimit)
-	write_table2(trials, timelimit)
-	write_table3(trials, timelimit)
-	write_table4(trials, timelimit)
-	write_table5(trials, timelimit)
+	timelimit = 30*60
+	# write_table1(trials, timelimit)
+	# write_table2(trials, timelimit)
+	# write_table3(trials, timelimit)
+	# write_table4(trials, timelimit)
+	# write_table5(trials, timelimit)
+	write_table6(trials, timelimit, "/home/akmarak-laptop/IMRC/db-CBS/results")
+
 
 
