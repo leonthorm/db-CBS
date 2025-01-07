@@ -142,7 +142,7 @@ def main():
 		# "swap1_double_integrator",
 		# 2 robot cases
 		# "swap2_unicycle",
-		# "swap2_unicycle_sphere",
+		"swap2_unicycle_sphere",
 		# "swap2_unicycle_kink",
 		# "swap2_double_integrator",
 		# "swap2_trailer",
@@ -151,9 +151,9 @@ def main():
 		# "makespan_vs_soc_1",
 		# "makespan_vs_soc_0",
 		# "alcove_unicycle",
-		# "alcove_unicycle_sphere",
+		"alcove_unicycle_sphere",
 		# "at_goal_unicycle",
-		# "at_goal_unicycle_sphere",
+		"at_goal_unicycle_sphere",
 		# 3 robot cases
 		# "swap3_unicycle",
 		# "swap3_unicycle_sphere",
@@ -190,27 +190,27 @@ def main():
 		# "drone4c",
 		# "drone8c",
 		# "drone10c",
-		"drone12c",
-		"drone16c",
+		# "drone12c",
+		# "drone16c",
 		# "drone24c",
 		# "drone32c",
 	]
 
 	# add random cases
 	# for kind in ["unicycle_sphere", "hetero"]: 
-	# 	for n in [2,4,8]:
-	# 		for k in range(10):
-	# 			instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
+		# for n in [2,4,8]:
+			# for k in range(10):
+				# instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
 
 	algs = [
-		# "sst",
-		# "s2m2",
-		# "k-cbs",
-		# "db-cbs",
+		"sst",
+		"s2m2",
+		"k-cbs",
+		"db-cbs",
 		"db-ecbs",
 	]
 	trials = 1 
-	timelimit = 45*60 
+	timelimit = 5*60 
 
 	tasks = []
 	for instance in instances:
@@ -247,7 +247,7 @@ def main():
 	# paper_tables.write_table2(trials, timelimit)
 	# paper_tables.write_table3(trials, timelimit)
 	# paper_tables.write_table4(trials, timelimit)
-	# paper_tables.write_table5(trials, timelimit)
+	paper_tables.write_table5(trials, timelimit)
 
 if __name__ == '__main__':
 	main()

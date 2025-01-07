@@ -56,7 +56,7 @@ db-ecbs:
   default:
     delta_0: 0.5
     delta_rate: 0.9
-    num_primitives_0: 400
+    num_primitives_0: 100
     num_primitives_rate: 1.5
     alpha: 0.5
     filter_duplicates: True
@@ -68,7 +68,7 @@ db-ecbs:
     rewire: True
     execute_greedy_optimization: False
     execute_joint_optimization: True
-    residual_force: True # NN, augmented state
+    residual_force: False # NN, augmented state
     conservative: False # Ellipsoid shape, no augmented state
     save_expanded_trajs: False
   '*_unicycle_sphere':
@@ -79,7 +79,7 @@ db-ecbs:
     delta_0: 0.75
   '*_trailer':
     delta_0: 0.9
-    # suboptimality_factor: 3.3
+    suboptimality_factor: 3.3
   '*alcove_unicycle':
     num_primitives_0: 300 # alcove unicycle needs
   '*_unicycle2':
