@@ -68,8 +68,8 @@ db-ecbs:
     rewire: True
     execute_greedy_optimization: False
     execute_joint_optimization: True
-    residual_force: False # NN, augmented state
-    conservative: True # Ellipsoid shape, no augmented state
+    residual_force: True # NN, augmented state
+    conservative: False # Ellipsoid shape, no augmented state
     save_expanded_trajs: False
   '*_unicycle_sphere':
     delta_0: 0.9
