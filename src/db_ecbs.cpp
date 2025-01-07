@@ -174,7 +174,7 @@ int main(int argc, char* argv[]) {
         } else if (robotType == "integrator2_2d_v0"){
             motionsFile = "../new_format_motions/integrator2_2d_v0/integrator2_2d_v0.msgpack";
         } else if (robotType == "integrator2_3d_v0" || robotType == "integrator2_3d_large_v0"){
-            motionsFile = "../new_format_motions/integrator2_3d_v0/long_50/integrator2_3d_v0.bin.im.bin.sp.bin";
+            motionsFile = "../new_format_motions/integrator2_3d_v0/long_50_1000/integrator2_3d_v0.bin.im.bin.sp.bin";
         } else if (robotType.find("_res_") != std::string::npos){
             motionsFile = "../new_format_motions/integrator2_3d_v0/residual/integrator2_3d_v0.bin.im.bin.sp.bin";
         } else{
@@ -512,7 +512,6 @@ int main(int argc, char* argv[]) {
                   std::cerr << "Error: Unable to open file for writing." << std::endl;
               }
             }
-            std::cout << "optimization failed, new iteration" << std::endl;
             break; // continue with the next iteration
           }
           // cbs-style/greedy optimization
