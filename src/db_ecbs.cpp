@@ -488,7 +488,7 @@ int main(int argc, char* argv[]) {
                 stats << "    duration_tdbastar_eps: "  << duration_discrete.count() << "\n";
                 stats << "    duration_opt: " << duration_opt.count() << "\n";
                 stats.flush(); 
-                // return 0;
+                return 0;
                 if(check_anytime){
                   std::string tmp_File1 = output_folder + "/discrete_" + std::to_string(iteration) + ".yaml";
                   discrete_search_sol.to_yaml_format(tmp_File1.c_str());
