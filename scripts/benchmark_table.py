@@ -142,7 +142,7 @@ def get_alg_name(alg_key):
 def write_table(rows, algs, results_path, fname, trials, T, regret=False):
 
 	result = compute_results(rows, algs, results_path, trials, T, regret)
-
+	print(result)
 	output_path = Path(results_path) / Path(fname)
 	with open(output_path.with_suffix(".tex"), "w") as f:
 
@@ -156,7 +156,7 @@ def write_table(rows, algs, results_path, fname, trials, T, regret=False):
 
 		out = r"\begin{tabular}{c || c"
 		for alg in algs:
-			if alg == "sst" and not regret:
+			if (alg == "sst" or alg == "ellipsoid" or alg == "residual") and not regret:
 				out += r" || r|r|r|r"
 			else:
 				out += r" || r|r|r"
@@ -165,12 +165,12 @@ def write_table(rows, algs, results_path, fname, trials, T, regret=False):
 		out = r"\# & Instance"
 		for k, alg in enumerate(algs):
 			if k == len(algs) - 1:
-				if alg == "sst" and not regret:
+				if (alg == "sst" or alg == "ellipsoid" or alg == "residual") and not regret:
 					out += r" & \multicolumn{4}{c}{"
 				else:
 					out += r" & \multicolumn{3}{c}{"
 			else:
-				if alg == "sst" and not regret:
+				if (alg == "sst" or alg == "ellipsoid" or alg == "residual") and not regret:
 					out += r" & \multicolumn{4}{c||}{"
 				else:
 					out += r" & \multicolumn{3}{c||}{"
@@ -181,7 +181,7 @@ def write_table(rows, algs, results_path, fname, trials, T, regret=False):
 		out = r"& "
 		if not regret:
 			for alg in algs:
-				if alg == "sst":
+				if alg == "sst" or alg == "ellipsoid" or alg == "residual":
 					out += r" & $p$ & $t^{\mathrm{st}} [s]$ & $J^{\mathrm{st}} [s]$ & $J^{f} [s]$"
 				else:
 					out += r" & $p$ & $t^{\mathrm{st}} [s]$ & $J^{\mathrm{st},f} [s]$"
@@ -205,8 +205,8 @@ def write_table(rows, algs, results_path, fname, trials, T, regret=False):
 				if not regret:
 					out = print_and_highlight_best_max(out, 'success', result[row], alg, algs)
 					out = print_and_highlight_best(out, 't^st_median', result[row], alg, algs)
-					out = print_and_highlight_best(out, 'J^f_median', result[row], alg, algs)
-					if alg == "sst":
+					out = print_and_highlight_best(out, 'J^st_median', result[row], alg, algs)
+					if alg == "sst" or alg == "ellipsoid" or alg == "residual":
 						out = print_and_highlight_best(out, 'J^f_median', result[row], alg, algs)
 				else:
 					out = print_and_highlight_best_max(out, 'success', result[row], alg, algs)
