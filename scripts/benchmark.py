@@ -197,10 +197,10 @@ def main():
 	]
 
 	# add random cases
-	# for kind in ["unicycle_sphere", "hetero"]: 
-		# for n in [2,4,8]:
-			# for k in range(10):
-				# instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
+	for kind in ["unicycle_sphere", "hetero"]: 
+		for n in [2,4,8]:
+			for k in range(10):
+				instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
 
 	algs = [
 		"sst",
@@ -209,7 +209,7 @@ def main():
 		"db-cbs",
 		"db-ecbs",
 	]
-	trials = 1 
+	trials = 10 
 	timelimit = 5*60 
 
 	tasks = []
