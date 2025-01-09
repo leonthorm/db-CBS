@@ -288,7 +288,7 @@ int main(int argc, char* argv[]) {
     options_tdbastar.delta = cfg["delta_0"].as<float>();
     options_tdbastar.max_motions = cfg["num_primitives_0"].as<size_t>();
     stats << "stats: " << "\n";
-    for (size_t iteration = 0; iteration < 10; ++iteration) {
+    for (size_t iteration = 0; ; ++iteration) {
       std::cout << "iteration: " << iteration << std::endl;
       if (iteration > 0) {
         if (solved_db) {
@@ -498,7 +498,7 @@ int main(int argc, char* argv[]) {
                 }
               }
               // extract motions from the solution
-              extract_motion_primitives(problem, optimization_sol, sub_motions, robots, /*length*/7);
+              extract_motion_primitives(problem, optimization_sol, sub_motions, robots, /*length*/1);
               itr_cost_data["runs"].push_back(YAML::Node());
               itr_cost_data["runs"][iteration]["iteration"] = iteration;
               itr_cost_data["runs"][iteration]["lowest_cost"] = lowest_cost;

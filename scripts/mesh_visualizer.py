@@ -77,7 +77,10 @@ def visualize(env_file, result_file, filename_video=None):
         states.append(state)
         position = [[sublist[i] for sublist in state] for i in range(3)] # assumes 3D 
         position = np.array(position)
-        vis["Quadrotor" + str(name_robot)].set_object(g.StlMeshGeometry.from_file('../meshes/cf2_assembly.stl'), g.MeshLambertMaterial(color=0x0000FF)) # blue
+        if(data["robots"][i]["type"] == "integrator2_3d_large_v0"):
+          vis["Quadrotor" + str(name_robot)].set_object(g.StlMeshGeometry.from_file('../meshes/cf2_assembly.stl'), g.MeshLambertMaterial(color=0xFF0000)) # red
+        else: 
+          vis["Quadrotor" + str(name_robot)].set_object(g.StlMeshGeometry.from_file('../meshes/cf2_assembly.stl'), g.MeshLambertMaterial(color=0x0000FF)) # blue
         vis["trajectory" + str(name_robot)].set_object(g.Line(g.PointsGeometry(position), g.LineBasicMaterial(color=0x00FF00))) # green
         name_robot+=1
     # max_k = len(max(states))
