@@ -13,6 +13,8 @@
 // DYNOPLAN
 #include <dynoplan/optimization/ocp.hpp>
 #include "dynoplan/optimization/multirobot_optimization.hpp"
+#include "dynoplan/optimization/payloadTransport_optimization.hpp"
+#include "dynoplan/optimization/unicyclesWithRods_optimization.hpp"
 #include "dynoplan/tdbastar/tdbastar.hpp"
 // DYNOBENCH
 #include "dynobench/general_utils.hpp"
@@ -25,6 +27,8 @@
 #include <fcl/fcl.h>
 #include "planresult.hpp"
 #include "dbcbs_utils.hpp"
+#include "init_guess_payload.hpp"
+#include "init_guess_unicycles.hpp"
 
 using namespace dynoplan;
 namespace fs = std::filesystem;
@@ -165,7 +169,8 @@ int main(int argc, char* argv[]) {
         } else if (robotType == "integrator2_3d_v0"){
             motionsFile = "../new_format_motions/integrator2_3d_v0/integrator2_3d_v0.bin.im.bin.sp.bin";
         } else if (robotType == "quad3d_v0") {
-            motionsFile = "../new_format_motions/quad3d_v0/quad3d_v0.msgpack";
+            motionsFile = "../new_format_motions/quad3d_v0_old/quad3d_v0_cut.msgpack";
+            // motionsFile = "../new_format_motions/quad3d_v0/quad3d_v0.msgpack";
         } else {
             throw std::runtime_error("Unknown motion filename for this robottype!");
         }
@@ -237,17 +242,23 @@ int main(int argc, char* argv[]) {
     for (size_t iteration = 0; ; ++iteration) {
       if (iteration > 0) {
         if (solved_db) {
-            options_tdbastar.delta *= cfg["delta_0"].as<float>();
+          options_tdbastar.delta *= cfg["delta_0"].as<float>();
         } else {
-            options_tdbastar.delta *= 0.99;
+          options_tdbastar.delta *= cfg["delta_rate"].as<float>();
+          tol *= cfg["delta_rate"].as<float>();
+          options_tdbastar.max_motions *= cfg["num_primitives_rate"].as<float>();
         }
-        options_tdbastar.max_motions *= cfg["num_primitives_rate"].as<float>();
         options_tdbastar.max_motions = std::min<size_t>(options_tdbastar.max_motions, 1e6);
+        std::cout << "Enabling " << options_tdbastar.max_motions << " motions" << std::endl;
+        std::cout << "*** options_tdbastar iteration: " << iteration << "***" << std::endl;
+        options_tdbastar.print(std::cout);
+        std::cout << "***" << std::endl;
       }
       // disable/enable motions 
       for (auto& iter : robot_motions) {
           for (size_t i = 0; i < problem.robotTypes.size(); ++i) {
               if (iter.first == problem.robotTypes[i]) {
+                  std::cout << "num of max motions: " << options_tdbastar.max_motions << std::endl; 
                   disable_motions(robots[i], problem.robotTypes[i], options_tdbastar.delta, filter_duplicates, alpha, 
                                   options_tdbastar.max_motions, iter.second);
                   break;
@@ -299,14 +310,25 @@ int main(int argc, char* argv[]) {
             export_solutions(P.solution, robots.size(), &out, id);
             size_t pos = outputFile.rfind(".yaml");
             std::string outputFile_payload = "../result_dbcbs_payload.yaml";
-            // Check if ".yaml" is found at the end of the string
-            if (pos != std::string::npos) {
-              // Remove ".yaml" and add "_payload.yaml"
-              outputFile_payload = outputFile.substr(0, pos) + "_payload.yaml";
-              std::cout << "outputFile_payload: " << outputFile_payload << std::endl;
-            }
+            std::string joint_robot_env_path;
+            std::string resultPath = outputFile; // Start with the original outputFile path
+            size_t pos_resultPath = resultPath.rfind("result_dbcbs.yaml"); // Find the position of "result_dbcbs.yaml"
+
             if (solve_p0) {
-              export_solution_p0(p0_sol, outputFile_payload);
+              if (startsWith(robots[0]->name, "quad3d")) {
+                outputFile_payload = outputFile.substr(0, pos) + "_payload.yaml";
+                resultPath.replace(pos_resultPath, std::string("result_dbcbs.yaml").length(), "init_guess_payload.yaml");
+                export_solution_p0(p0_sol, outputFile_payload);
+                generate_init_guess_payload(inputFile, outputFile_payload, outputFile, resultPath, robots.size(), joint_robot_env_path);
+                p0_sol.clear();
+              } else if (startsWith(robots[0]->name, "unicycle")) {                
+                resultPath.replace(pos_resultPath, std::string("result_dbcbs.yaml").length(), "init_guess_unicycles.yaml");
+                outputFile_payload = outputFile.substr(0, pos) + "_unicycles_dummy.yaml";
+                export_solution_p0(p0_sol, outputFile_payload); // dummy file: nothing is generated here
+                generate_init_guess_unicycles(inputFile, outputFile, resultPath, robots.size(), joint_robot_env_path);
+            
+              }
+              
             }
             // get motion_primitives_plot
             if (save_forward_search_expansion){
@@ -314,17 +336,28 @@ int main(int argc, char* argv[]) {
               std::ofstream out2(output_folder + "/expanded_trajs_forward_solution_" + gen_random(6) + ".yaml");
               export_node_expansion(expanded_trajs_tmp, &out2);
             }
-            bool sum_robot_cost = true;
-            // bool feasible = execute_optimizationMultiRobot(inputFile,
-            //                               outputFile, 
-            //                               optimizationFile,
-            //                               DYNOBENCH_BASE,
-            //                               sum_robot_cost);
-            bool feasible = true;
-            if (feasible) {
-              return 0;
+            bool feasible = false;
+            if (startsWith(robots[0]->name, "quad3d")) {
+              bool sum_robot_cost = true;
+              feasible = execute_payloadTransportOptimization(joint_robot_env_path,
+                                            resultPath, 
+                                            optimizationFile,
+                                            DYNOBENCH_BASE,
+                                            sum_robot_cost);
+            } else if (startsWith(robots[0]->name, "unicycle")) {
+              bool sum_robot_cost = true;
+              feasible = execute_unicyclesWithRodsOptimization(joint_robot_env_path,
+                                            resultPath, 
+                                            optimizationFile,
+                                            DYNOBENCH_BASE,
+                                            sum_robot_cost);
             }
-            break;
+            if (!feasible) {
+              std::cout << "Optimization failed. Restarting the iteration with updated parameters." << std::endl;
+              solved_db = false;
+              break;  // Restart the iteration
+            }
+            return 0;
         }
         ++expands;
         if (expands % 100 == 0) {
