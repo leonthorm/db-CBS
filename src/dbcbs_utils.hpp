@@ -19,6 +19,159 @@
 #include "dynoplan/tdbastar/tdbastar.hpp"
 
 
+void add_motion_primitives(dynobench::Problem &problem, 
+                           dynobench::Trajectory &trajectory, 
+                           std::map<std::string, std::vector<dynoplan::Motion>> &robot_motions,
+                           const std::vector<std::shared_ptr<dynobench::Model_robot>> &all_robots) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    if (startsWith(all_robots[0]->name, "quad3d")) {
+        std::cout << "Computing primitives for quadrotors..." << std::endl;
+        std::uniform_int_distribution<> random_length(20, 30); 
+        int min_length = 10;
+
+        size_t num_robots = all_robots.size();
+        double l = 0.5; // Assume fixed cable length
+
+        for (size_t robot_id = 0; robot_id < num_robots; ++robot_id) {
+            size_t current_idx = 0;
+            Eigen::Vector3d init_state = Eigen::Vector3d::Zero();
+            
+            while (current_idx < trajectory.states.size()) {    
+                int len = random_length(gen);
+                len = std::min(len, static_cast<int>(trajectory.states.size() - current_idx));
+                if (trajectory.states.size() - current_idx <= min_length) {
+                    len = static_cast<int>(trajectory.states.size() - current_idx);
+                }
+
+                std::vector<Eigen::VectorXd> uavStates;
+                std::vector<Eigen::VectorXd> uavActions;
+
+                for (size_t i = current_idx; i < current_idx + len; ++i) {
+                    const Eigen::VectorXd &state = trajectory.states[i];
+                    if (i == 0) {
+                        init_state = state.segment<3>(0); 
+                    }
+
+                    // Normalize payload position
+                    Eigen::Vector3d payloadPos = state.segment<3>(0) - init_state;
+                    Eigen::Vector3d payloadVel = state.segment<3>(3);
+
+                    // state: p0 v0 qc1 wc1 qc2 wc2,...,qcn,wcn, quat1, w1, quat2, w2, ..., quatn, wn
+                    // state_size 6 + 6 + 6 *num_robots + 7*num_robots 
+                    Eigen::Vector3d cableUnitVec = state.segment<3>(6 + 6 * robot_id);
+                    Eigen::Vector3d cableAngularVel = state.segment<3>(6 + 6 * robot_id + 3);
+                    Eigen::Vector4d uavQuat = state.segment<4>(6 + 6 * num_robots + 7 * robot_id);
+                    Eigen::Vector3d uavAngularVel = state.segment<3>(6 + 6 * num_robots + 7 * robot_id + 4);
+
+                    // Compute UAV position and velocity
+                    Eigen::Vector3d uavPos = payloadPos - l * cableUnitVec;
+                    Eigen::Vector3d cableUnitVec_der = cableAngularVel.cross(cableUnitVec);
+                    Eigen::Vector3d uavVel = payloadVel - l * cableUnitVec_der;
+
+                    // UAV state: [position, quaternion, velocity, angular velocity]
+                    Eigen::VectorXd uavState(13);
+                    uavState << uavPos, uavQuat, uavVel, uavAngularVel;
+                    uavStates.push_back(uavState);
+                    
+                    // Add action if not the last state
+                    if (i < current_idx + len - 1) {
+                        const Eigen::VectorXd &action = trajectory.actions[i];
+                        uavActions.push_back(action.segment<4>(4 * robot_id));
+                    }
+                }
+
+                // Create a new trajectory segment
+                dynobench::Trajectory new_robot_traj;
+                new_robot_traj.states = uavStates;
+                new_robot_traj.actions = uavActions;
+
+                for (size_t k = 0; k < num_robots; ++k) {
+                    // Convert trajectory to motion and add to robot_motions
+                    dynoplan::Motion new_motion;
+                    traj_to_motion(new_robot_traj,  *all_robots[k], new_motion, /*check collision*/ true);
+                    new_motion.traj = new_robot_traj;
+                    new_motion.idx = robot_motions[problem.robotTypes[k]].size();
+                    robot_motions[problem.robotTypes[k]].push_back(std::move(new_motion));
+                }
+
+                current_idx += len;
+            }
+
+        }
+    } else if (startsWith(all_robots[0]->name, "unicycle")) {
+        std::cout << "Computing primitives for unicycles..." << std::endl;
+        std::uniform_int_distribution<> random_length(10, 15); 
+        int min_length = 5;
+
+        size_t num_robots = all_robots.size();
+        for (size_t robot_id = 0; robot_id < num_robots; ++robot_id) {
+
+            size_t current_idx = 0;
+            double px_init = 0.0;
+            double py_init = 0.0;
+
+            while (current_idx < trajectory.states.size()) {    
+                int len = random_length(gen);
+                len = std::min(len, static_cast<int>(trajectory.states.size() - current_idx));
+                if (trajectory.states.size() - current_idx <= min_length) {
+                    len = static_cast<int>(trajectory.states.size() - current_idx);
+                }
+                std::vector<Eigen::VectorXd> unicycleStates;
+                std::vector<Eigen::VectorXd> unicycleActions;
+
+                for (size_t i = current_idx; i < current_idx + len; ++i) {
+                    const Eigen::VectorXd &state = trajectory.states[i];
+                    if (i == 0) {
+                        px_init = state[0];
+                        py_init = state[1];
+                    }
+
+                    double px = state[0] - px_init;
+                    double py = state[1] - py_init;
+
+                    for (size_t j = 0; j < robot_id; ++j) {
+                        double theta = state[2 + num_robots + j];
+                        px += 0.5 * cos(theta);
+                        py += 0.5 * sin(theta);
+                    }
+
+                    double alpha = state[2 + robot_id];
+                    Eigen::VectorXd unicycleState(3);
+                    unicycleState << px, py, alpha;
+                    unicycleStates.push_back(unicycleState);
+
+                    if (i < current_idx + len - 1) {
+                        const Eigen::VectorXd &action = trajectory.actions[i];
+                        unicycleActions.push_back(action.segment<2>(2 * robot_id));
+                    }
+                }
+
+                // Create a new trajectory segment
+                dynobench::Trajectory new_robot_traj;
+                new_robot_traj.states = unicycleStates;
+                new_robot_traj.actions = unicycleActions;
+
+                for (size_t k = 0; k < num_robots; ++k) {
+                    // Convert trajectory to motion and add to robot_motions
+                    dynoplan::Motion new_motion;
+                    traj_to_motion(new_robot_traj,  *all_robots[k], new_motion, /*check collision*/ true);
+                    new_motion.traj = new_robot_traj;
+                    new_motion.idx = robot_motions[problem.robotTypes[k]].size();
+                    robot_motions[problem.robotTypes[k]].push_back(std::move(new_motion));
+                }
+                // Move to the next segment
+                current_idx += len;
+            }
+
+            std::cout << "Robot motions after: " << robot_motions[problem.robotTypes[robot_id]].size() << std::endl;
+        }
+    }
+}
+
+
+
 void export_solution_p0(const std::vector<Eigen::VectorXf> &p0_opt, std::string outputFile_payload) { 
     
     std::ofstream out(outputFile_payload);

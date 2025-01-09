@@ -169,8 +169,7 @@ int main(int argc, char* argv[]) {
         } else if (robotType == "integrator2_3d_v0"){
             motionsFile = "../new_format_motions/integrator2_3d_v0/integrator2_3d_v0.bin.im.bin.sp.bin";
         } else if (robotType == "quad3d_v0") {
-            motionsFile = "../new_format_motions/quad3d_v0_old/quad3d_v0_cut.msgpack";
-            // motionsFile = "../new_format_motions/quad3d_v0/quad3d_v0.msgpack";
+            motionsFile = "../new_format_motions/quad3d_v0/quad3d_v0.msgpack";
         } else {
             throw std::runtime_error("Unknown motion filename for this robottype!");
         }
@@ -239,10 +238,16 @@ int main(int argc, char* argv[]) {
     problem.starts = problem_original.starts;
     problem.goals = problem_original.goals;
     options_tdbastar.delta = cfg["delta_0"].as<float>();
+    int optimization_counter = 0;
+    std::string optimizationFile_anytime = optimizationFile;
+    dynobench::Trajectory sol;
     for (size_t iteration = 0; ; ++iteration) {
       if (iteration > 0) {
         if (solved_db) {
-          options_tdbastar.delta *= cfg["delta_0"].as<float>();
+          std::cout << "Optimization succeeded!, optimization counter: "<< optimization_counter << std::endl;
+          options_tdbastar.delta *= cfg["delta_rate"].as<float>();
+          options_tdbastar.max_motions *= cfg["num_primitives_rate"].as<float>();
+          tol *= cfg["delta_rate"].as<float>();
         } else {
           options_tdbastar.delta *= cfg["delta_rate"].as<float>();
           tol *= cfg["delta_rate"].as<float>();
@@ -328,7 +333,6 @@ int main(int argc, char* argv[]) {
                 generate_init_guess_unicycles(inputFile, outputFile, resultPath, robots.size(), joint_robot_env_path);
             
               }
-              
             }
             // get motion_primitives_plot
             if (save_forward_search_expansion){
@@ -339,16 +343,28 @@ int main(int argc, char* argv[]) {
             bool feasible = false;
             if (startsWith(robots[0]->name, "quad3d")) {
               bool sum_robot_cost = true;
+              // dynobench::Trajectory sol;
+              optimizationFile_anytime = optimizationFile.substr(0, pos) + "_" + std::to_string(optimization_counter) + optimizationFile.substr(pos);
               feasible = execute_payloadTransportOptimization(joint_robot_env_path,
                                             resultPath, 
                                             optimizationFile,
+                                            optimizationFile_anytime,
+                                            sol,
                                             DYNOBENCH_BASE,
                                             sum_robot_cost);
+              // TODO: add the optimization sol in the robot motions
+              // 1. transform the opt solution to the robot states
+              // 2. add to all robots motions
+                              
             } else if (startsWith(robots[0]->name, "unicycle")) {
               bool sum_robot_cost = true;
+              // dynobench::Trajectory sol;
+              optimizationFile_anytime = optimizationFile.substr(0, pos) + "_" + std::to_string(optimization_counter) + optimizationFile.substr(pos);
               feasible = execute_unicyclesWithRodsOptimization(joint_robot_env_path,
                                             resultPath, 
                                             optimizationFile,
+                                            optimizationFile_anytime,
+                                            sol,
                                             DYNOBENCH_BASE,
                                             sum_robot_cost);
             }
@@ -357,7 +373,13 @@ int main(int argc, char* argv[]) {
               solved_db = false;
               break;  // Restart the iteration
             }
-            return 0;
+            solved_db = true;
+            std::cout << "cost of joint system: " << sol.cost << std::endl;
+            std::cout << "Robot motions before: " << robot_motions[problem.robotTypes[0]].size() << std::endl;
+            add_motion_primitives(problem, sol, robot_motions, robots);
+            std::cout << "Robot motions before: " << robot_motions[problem.robotTypes[0]].size() << std::endl;
+            optimization_counter++;
+            break;
         }
         ++expands;
         if (expands % 100 == 0) {
