@@ -180,11 +180,13 @@ def run_dbcbs(filename_env, folder, task, cfg):
                     result = subprocess.run(cmd, timeout=timelimit, stdout=logfile, stderr=logfile)
                 t_dbcbs_stop = time.time()
                 duration_dbcbs += t_dbcbs_stop - t_dbcbs_start
-                if result.returncode != 0:
+                with open(filename_result_dbcbs, "r") as f:
+                    results_dbcbs = yaml.load(f,Loader=yaml.CSafeLoader)
+
+                if result.returncode != 0 and results_dbcbs["result"][0]["states"] is None:
                     print("db-cbs failed ", result.returncode)
+                
                 else:
-                    with open(filename_result_dbcbs, "r") as f:
-                        results_dbcbs = yaml.load(f,Loader=yaml.CSafeLoader)
                     
                     cost = results_dbcbs["cost"]
                     expansions = results_dbcbs["expansions"]
@@ -198,11 +200,30 @@ def run_dbcbs(filename_env, folder, task, cfg):
                     stats.write("    cost: {}\n".format(cost))
                     stats.write("    expansions: {}\n".format(expansions))
                     stats.flush()
-                return True
+                    return True
             except:
-                print("Failure!")
-                return False
+                with open(filename_result_dbcbs, "r") as f:
+                    results_dbcbs = yaml.load(f,Loader=yaml.CSafeLoader)
 
+                if results_dbcbs["result"][0]["states"] is None:
+                    print("db-cbs failed ", result.returncode)
+                    print("Failure!")
+                    return False
+                else:
+                    cost = results_dbcbs["cost"]
+                    expansions = results_dbcbs["expansions"]
+                    now = time.time()
+                    t = now - start
+                    print("success!", t, ", instance:", task.instance["name"], " trial: ", task.trial)                    
+                    stats.write("  - duration_dbcbs: {}\n".format(t))
+                    stats.write("    delta_0: {}\n".format(delta))
+                    stats.write("    delta_rate: {}\n".format(delta_rate))
+                    stats.write("    payload_cfg: {}\n".format(payload_cfg)) 
+                    stats.write("    cost: {}\n".format(cost))
+                    stats.write("    expansions: {}\n".format(expansions))
+                    stats.flush()
+                    return True
+                    
 def execute_task(task: ExecutionTask):
     scripts_path = Path("../scripts")
     results_path = Path("../stats_db")
@@ -356,7 +377,7 @@ def main():
     ] 
 
 
-    trials = 5
+    trials = 1
     timelimit = 350 # [s]
     tasks = []
     for instance, db in zip(instances, db_params):
