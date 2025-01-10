@@ -193,7 +193,7 @@ def main():
 		"drone12c",
 		"drone16c",
 		"drone24c",
-		"drone32c",
+		# "drone32c",
 	]
 
 	# add random cases
