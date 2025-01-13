@@ -89,8 +89,8 @@ def createRobotDict(coltrans_dict, robotType="quadrotor"):
             qi_start = np.array([np.cos(th_start_i), np.sin(th_start_i)])
             qi_goal = np.array([np.cos(th_goal_i), np.sin(th_goal_i)])
 
-            robot_start[0:2] = p0_prev_start + 0.5*qi_start 
-            robot_goal[0:2]  =  p0_prev_goal + 0.5*qi_goal
+            robot_start[0:2] = p0_prev_start + l[i-1]*qi_start 
+            robot_goal[0:2]  =  p0_prev_goal + l[i-1]*qi_goal
 
             p0_prev_start = robot_start[0:2]
             p0_prev_goal  = robot_goal[0:2]
