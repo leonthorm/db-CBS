@@ -48,6 +48,7 @@ db-cbs:
     heuristic1_delta: 1.0
     payload:
       solve_p0: True
+      anytime: False
       p0_init_guess: [-0.5, 0.0, 0.0]
       tol: 0.3
   '*_unicycle_sphere':
