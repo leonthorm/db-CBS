@@ -22,7 +22,7 @@
 void add_motion_primitives(dynobench::Problem &problem, 
                            dynobench::Trajectory &trajectory, 
                            std::map<std::string, std::vector<dynoplan::Motion>> &robot_motions,
-                           const std::vector<std::shared_ptr<dynobench::Model_robot>> &all_robots) {
+                           const std::vector<std::shared_ptr<dynobench::Model_robot>> &all_robots, double &sum_cost) {
     std::random_device rd;
     std::mt19937 gen(rd());
 
@@ -86,7 +86,8 @@ void add_motion_primitives(dynobench::Problem &problem,
                 dynobench::Trajectory new_robot_traj;
                 new_robot_traj.states = uavStates;
                 new_robot_traj.actions = uavActions;
-
+                std::cout << "cost of robot: " << robot_id <<", " << uavActions.size()*all_robots[0]->ref_dt << std::endl;
+                sum_cost += uavActions.size()*all_robots[0]->ref_dt;
                 for (size_t k = 0; k < num_robots; ++k) {
                     // Convert trajectory to motion and add to robot_motions
                     dynoplan::Motion new_motion;
@@ -152,6 +153,8 @@ void add_motion_primitives(dynobench::Problem &problem,
                 dynobench::Trajectory new_robot_traj;
                 new_robot_traj.states = unicycleStates;
                 new_robot_traj.actions = unicycleActions;
+                std::cout << "cost of robot: " << robot_id <<", " << unicycleActions.size()*all_robots[0]->ref_dt << std::endl;
+                sum_cost += unicycleActions.size()*all_robots[0]->ref_dt;
 
                 for (size_t k = 0; k < num_robots; ++k) {
                     // Convert trajectory to motion and add to robot_motions
@@ -164,8 +167,6 @@ void add_motion_primitives(dynobench::Problem &problem,
                 // Move to the next segment
                 current_idx += len;
             }
-
-            std::cout << "Robot motions after: " << robot_motions[problem.robotTypes[robot_id]].size() << std::endl;
         }
     }
 }
@@ -294,7 +295,8 @@ struct cableShapes {
         } else if (startsWith(robot_name, "unicycle")) {
             for (size_t i=0; i < num_robots-1; ++i) {
                 std::shared_ptr<fcl::CollisionGeometryd> cablegeom;
-                cablegeom.reset(new fcl::Boxd(0.6*0.5,0.01, 0.01));
+                // cablegeom.reset(new fcl::Boxd(0.6*0.5,0.01, 0.01));
+                cablegeom.reset(new fcl::Boxd(0.6*0.37,0.01, 0.01));
                 cablegeom->setUserData((void*) i);
                 auto cableco = new fcl::CollisionObject(cablegeom);
                 cableco->computeAABB();
@@ -528,7 +530,8 @@ bool getEarliestConflict(
                 size_t num_robots = all_robots.size(); 
                 for (size_t i=0; i < num_robots-1; ++i) {
                     double distance1 = (pi[i+1] - pi[i]).norm();
-                    double tol1 = abs(distance1 - 0.5); // Length of cable is assumed to be 0.5
+                    // double tol1 = abs(distance1 - 0.5); // Length of cable is assumed to be 0.5
+                    double tol1 = abs(distance1 - 0.37); // Length of cable is assumed to be 0.5
                     std::cout << "tol: " << tol1  << std::endl;
                     if (tol1 > max_tol) {
                         early_conflict.time = t * all_robots[0]->ref_dt;
