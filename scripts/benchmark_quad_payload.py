@@ -398,7 +398,7 @@ def main():
     ] 
 
 
-    trials = 1
+    trials = 10
     timelimit = 350 # [s]
     tasks = []
     for instance, db in zip(instances, db_params):
