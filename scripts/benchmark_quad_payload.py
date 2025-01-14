@@ -381,7 +381,7 @@ def main():
     ]
 
     db_params = [    
-        {"delta_0": 0.9, "delta_rate": 0.95, "num_primitives_0": 1000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_2robots
+        {"delta_0": 0.9, "delta_rate": 0.95, "num_primitives_0": 1000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": True, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_2robots
         {"delta_0": 0.9, "delta_rate": 0.95, "num_primitives_0": 1000, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_3robots
         {"delta_0": 0.9, "delta_rate": 0.95, "num_primitives_0": 1000, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_4robots
         {"delta_0": 0.9, "delta_rate": 0.95, "num_primitives_0": 5000, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_5robots
