@@ -295,8 +295,8 @@ struct cableShapes {
         } else if (startsWith(robot_name, "unicycle")) {
             for (size_t i=0; i < num_robots-1; ++i) {
                 std::shared_ptr<fcl::CollisionGeometryd> cablegeom;
-                // cablegeom.reset(new fcl::Boxd(0.6*0.5,0.01, 0.01));
-                cablegeom.reset(new fcl::Boxd(0.6*0.37,0.01, 0.01));
+                cablegeom.reset(new fcl::Boxd(0.6*0.5,0.01, 0.01));
+                // cablegeom.reset(new fcl::Boxd(0.6*0.37,0.01, 0.01));
                 cablegeom->setUserData((void*) i);
                 auto cableco = new fcl::CollisionObject(cablegeom);
                 cableco->computeAABB();
@@ -439,7 +439,7 @@ bool getEarliestConflict(
         if (solve_p0) {
             if (startsWith(all_robots[0]->name, "quad3d")) { // Assuming Homogenous robot team
                 size_t dim = 3;
-                double mu = 0.18;
+                double mu = 0.2;
                 double lambda = 1.;
                 std::vector<Eigen::VectorXf> pi;
                 std::vector<double> li;
@@ -530,8 +530,8 @@ bool getEarliestConflict(
                 size_t num_robots = all_robots.size(); 
                 for (size_t i=0; i < num_robots-1; ++i) {
                     double distance1 = (pi[i+1] - pi[i]).norm();
-                    // double tol1 = abs(distance1 - 0.5); // Length of cable is assumed to be 0.5
-                    double tol1 = abs(distance1 - 0.37); // Length of cable is assumed to be 0.5
+                    double tol1 = abs(distance1 - 0.5); // Length of cable is assumed to be 0.5
+                    // double tol1 = abs(distance1 - 0.37); // Length of cable is assumed to be 0.5
                     std::cout << "tol: " << tol1  << std::endl;
                     if (tol1 > max_tol) {
                         early_conflict.time = t * all_robots[0]->ref_dt;
