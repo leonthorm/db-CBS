@@ -27,7 +27,9 @@ def run_controller(folder, reftrajectory, output, model_path, computeAcc=True, n
                         "--out", folder / output,
                         "--model_path", model_path,
                     ], env={"PYTHONPATH": "dynoplan/dynobench/:/home/khaledwahba94/coltrans-planning/deps/crazyflie-firmware"}, check=True)
+        return True
     except subprocess.CalledProcessError as e:
+        return False
         print(f"Error: {e}")    
 
 def run_checker(filename_env, filename_result, filename_log):
@@ -123,17 +125,19 @@ def generate_init_guess(script, path_to_env, path_to_dbcbs, path_to_result,  pat
 
 
 def run_unicycles_controller(folder, reftrajectory, output, model_path):
-	try:
-		subprocess.run(["python3",
-					"../dynoplan/dynobench/example/unicycle_sim.py",
-					"-w",
-					"--inp", folder / reftrajectory,
-					"--out", folder / output,
-					"--model_path", model_path,
-					], env={"PYTHONPATH": "dynoplan/dynobench"}, check=True)
-	except Exception as e:
-		print(e)
-
+    
+    try:
+        subprocess.run(["python3",
+                "../dynoplan/dynobench/example/unicycle_sim.py",
+                "-w",
+                "--inp", folder / reftrajectory,
+                "--out", folder / output,
+                "--model_path", model_path], env={"PYTHONPATH": "dynoplan/dynobench"}, 
+                check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error: {e}")
+        return False
 
 def run_visualize(script, filename_env, filename_result, path_to_payload=None):
     if path_to_payload is not None:
@@ -312,28 +316,30 @@ def execute_task(task: ExecutionTask):
             robot_type = env_dict["joint_robot"][0]["type"]
 
         
-
+            control_success = False
             print("Visualize initial guess...")
             if "point" in robot_type:
                 run_visualize(vis_script, env_path, path_to_dbcbs_result, path_to_payload)
                 visualize_payload(str(env_joint_robot_path), result_folder / "init_guess_payload.yaml", opt_success=False)
                 print("Running the controller......\n")
-                run_controller(result_folder, "result_dbcbs_opt.yaml", "trajectory_opt.yaml", "../dynoplan/dynobench/models/" + task.instance["model"])
-                print("Visualizing the controller output......")
-                visualize_payload(str(env_joint_robot_path), result_folder / "trajectory_opt.yaml", reference_traj=result_folder / "result_dbcbs_opt.yaml", visualize_controller_out=True)   
+                control_success = run_controller(result_folder, "result_dbcbs_opt.yaml", "trajectory_opt.yaml", "../dynoplan/dynobench/models/" + task.instance["model"])
+                if control_success:
+                    print("Visualizing the controller output......")
+                    visualize_payload(str(env_joint_robot_path), result_folder / "trajectory_opt.yaml", reference_traj=result_folder / "result_dbcbs_opt.yaml", visualize_controller_out=True)   
             
             if "unicycle" in robot_type:
                 
                 run_visualize(vis_script, env_path, path_to_dbcbs_result, path_to_payload=None)
                 visualize_unicycles(str(env_joint_robot_path), result_folder / "init_guess_unicycles.yaml", visualize_controller_out=False)
                 print("Running the controller......\n")
-                run_unicycles_controller(result_folder, "result_dbcbs_opt.yaml", "trajectory_opt.yaml", "../dynoplan/dynobench/models/" + task.instance["model"])
-                print("Visualizing the controller output......")
-                
-                visualize_unicycles(str(env_joint_robot_path), result_folder / "trajectory_opt.yaml", reference_traj=result_folder / "result_dbcbs_opt.yaml", visualize_controller_out=True)
-            run_checker(str(env_joint_robot_path), result_folder / "trajectory_opt.yaml", (result_folder / "trajectory_opt.yaml").with_suffix(".check.txt"))
+                control_success = run_unicycles_controller(result_folder, "result_dbcbs_opt.yaml", "trajectory_opt.yaml", "../dynoplan/dynobench/models/" + task.instance["model"])
+                if control_success:
+                    print("Visualizing the controller output......")
+                    visualize_unicycles(str(env_joint_robot_path), result_folder / "trajectory_opt.yaml", reference_traj=result_folder / "result_dbcbs_opt.yaml", visualize_controller_out=True)
+            if control_success:
+                run_checker(str(env_joint_robot_path), result_folder / "trajectory_opt.yaml", (result_folder / "trajectory_opt.yaml").with_suffix(".check.txt"))
         else: 
-            run_visualize(vis_script, env_path, path_to_dbcbs_result)
+            print(f"db-cbs failed in {task.instance['name']}, trial {task.trial}")
     else: 
         print(f"db-cbs failed in {task.instance['name']}, trial {task.trial}")
 
