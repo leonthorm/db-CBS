@@ -33,6 +33,7 @@
 using namespace dynoplan;
 namespace fs = std::filesystem;
 
+using duration = std::chrono::duration<double>;
 #define DYNOBENCH_BASE "../dynoplan/dynobench/"
 
 int main(int argc, char* argv[]) {
@@ -69,9 +70,12 @@ int main(int argc, char* argv[]) {
       return 1;
     }
     YAML::Node cfg = YAML::LoadFile(cfgFile);
+    duration duration_discrete, duration_opt;
     if (cfg["db-cbs"]){
       cfg = cfg["db-cbs"]["default"];
     }
+    fs::path output_path(outputFile);
+    std::string output_folder = output_path.parent_path().string();
     // payload HL constraints configs
     std::vector<double> p0_init_guess;
     bool anytime_planning = false;
@@ -96,7 +100,6 @@ int main(int argc, char* argv[]) {
     std::cout << "solve with payload: " << solve_p0 << std::endl;
     float alpha = cfg["alpha"].as<float>();
     bool filter_duplicates = cfg["filter_duplicates"].as<bool>();
-    fs::path output_path(outputFile);
     // tdbstar options
     Options_tdbastar options_tdbastar;
     options_tdbastar.outFile = outputFile;
@@ -219,6 +222,10 @@ int main(int argc, char* argv[]) {
     std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>>*> heuristics(robots.size(), nullptr);
     std::vector<double> upper_bounds(num_robots, std::numeric_limits<double>::max());
     std::vector<double> hs(num_robots, -1.0); // start->hScore
+    double lowest_cost = std::numeric_limits<double>::max();
+    YAML::Node itr_cost_data;
+    std::string itr_cost_file = output_folder + "/iteration_cost.yaml";
+    std::string stats_file = output_folder + "/dbcbs_stats.yaml";
     std::vector<dynobench::Trajectory> expanded_trajs_tmp;
     if (cfg["heuristic1"].as<std::string>() == "reverse-search"){
       options_tdbastar.delta = cfg["heuristic1_delta"].as<float>();
@@ -250,13 +257,14 @@ int main(int argc, char* argv[]) {
     options_tdbastar.delta = cfg["delta_0"].as<float>();
     int optimization_counter = 0;
     std::string optimizationFile_anytime = optimizationFile;
+    auto discrete_start = std::chrono::steady_clock::now();
     for (size_t iteration = 0; ; ++iteration) {
       if (iteration > 0) {
         if (solved_db && solved_opt) {
           std::cout << "Optimization succeeded!, optimization counter: "<< optimization_counter << std::endl;
           options_tdbastar.delta *= cfg["delta_rate"].as<float>();
-          options_tdbastar.max_motions *= cfg["num_primitives_rate"].as<float>();
           tol *= cfg["delta_rate"].as<float>();
+          // options_tdbastar.max_motions *= cfg["num_primitives_rate"].as<float>();
 
           for (auto& iter : robot_motions){
             for (size_t i = 0; i < problem.robotTypes.size(); ++i){
@@ -347,6 +355,8 @@ int main(int argc, char* argv[]) {
         Conflict inter_robot_conflict;
         if (!getEarliestConflict(P.solution, robots, col_mng_robots, robot_objs, inter_robot_conflict, p0_init_guess, p0_sol, solve_p0, tol)){
             solved_db = true;
+            auto discrete_end = std::chrono::steady_clock::now();
+            duration_discrete = discrete_end - discrete_start;
             std::cout << "Final solution!" << std::endl; 
             create_dir_if_necessary(outputFile);
             std::ofstream out(outputFile);
@@ -381,9 +391,9 @@ int main(int argc, char* argv[]) {
             bool feasible = false;
             double sum_cost = 0.0;
             dynobench::Trajectory sol;
+            auto start = std::chrono::steady_clock::now();
             if (startsWith(robots[0]->name, "quad3d")) {
               bool sum_robot_cost = true;
-              // dynobench::Trajectory sol;
               optimizationFile_anytime = optimizationFile.substr(0, pos) + "_" + std::to_string(optimization_counter) + optimizationFile.substr(pos);
               feasible = execute_payloadTransportOptimization(joint_robot_env_path,
                                             resultPath, 
@@ -398,7 +408,6 @@ int main(int argc, char* argv[]) {
                               
             } else if (startsWith(robots[0]->name, "unicycle")) {
               bool sum_robot_cost = true;
-              // dynobench::Trajectory sol;
               optimizationFile_anytime = optimizationFile.substr(0, pos) + "_" + std::to_string(optimization_counter) + optimizationFile.substr(pos);
               feasible = execute_unicyclesWithRodsOptimization(joint_robot_env_path,
                                             resultPath, 
@@ -413,19 +422,53 @@ int main(int argc, char* argv[]) {
               solved_opt = false;
               
               add_motion_primitives(problem, sol, sub_motions, robots, sum_cost);
-              break;  // Restart the iteration
+              break;  
             }
+            auto end = std::chrono::steady_clock::now();
+            duration_opt = end - start;
             solved_opt = true;
-            std::cout << "Robot motions before: " << robot_motions[problem.robotTypes[0]].size() << std::endl;
             add_motion_primitives(problem, sol, sub_motions, robots, sum_cost);
-            std::cout << "sum of costs of robots: " << sum_cost << std::endl;
-            std::cout << "Robot motions before: " << robot_motions[problem.robotTypes[0]].size() << std::endl;
             if (!anytime_planning) {
+              sol.to_yaml_format(optimizationFile.c_str());  
+              itr_cost_data["delta"] =  options_tdbastar.delta;
+              itr_cost_data["delta_rate"] = cfg["delta_rate"].as<float>();
+              itr_cost_data["duration_opt"] = duration_opt.count();
+              itr_cost_data["duration_discrete"] = duration_discrete.count();
+
+              std::ofstream file(stats_file);
+              if (file.is_open()) {
+                  file << itr_cost_data;
+                  file.close();
+                  std::cout << "Iteration " << iteration << " and the lowest cost " << lowest_cost << std::endl;
+              } else {
+                  std::cerr << "Error: Unable to open file for writing." << std::endl;
+              }
               return 0;
             }
-            optimization_counter++;
-            for (size_t l = 0; l < num_robots; l++){
-              upper_bounds[l] = sum_cost - (hs_total - hs[l]);
+            if (lowest_cost > sum_cost) {
+              sol.to_yaml_format(optimizationFile.c_str());  
+              sol.to_yaml_format(optimizationFile_anytime.c_str());  
+              lowest_cost = sum_cost;
+              itr_cost_data["runs"].push_back(YAML::Node());
+              itr_cost_data["runs"][optimization_counter]["iteration"] = optimization_counter;
+              itr_cost_data["runs"][optimization_counter]["lowest_cost"] = lowest_cost;
+              itr_cost_data["runs"][optimization_counter]["delta"] = options_tdbastar.delta;
+              itr_cost_data["runs"][optimization_counter]["delta_rate"] = cfg["delta_rate"].as<float>();
+              itr_cost_data["runs"][optimization_counter]["duration_opt"] = duration_opt.count();
+              itr_cost_data["runs"][optimization_counter]["duration_discrete"] = duration_discrete.count();
+              std::ofstream file(itr_cost_file);
+              if (file.is_open()) {
+                  file << itr_cost_data;
+                  file.close();
+                  std::cout << "Iteration " << iteration << " and the lowest cost " << lowest_cost << std::endl;
+              } else {
+                  std::cerr << "Error: Unable to open file for writing." << std::endl;
+              }
+              optimization_counter++;
+              for (size_t l = 0; l < num_robots; l++){
+                upper_bounds[l] = sum_cost - (hs_total - hs[l]);
+              }
+
             }
             break;
         }
