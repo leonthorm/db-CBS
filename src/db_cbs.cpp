@@ -433,6 +433,8 @@ int main(int argc, char* argv[]) {
               itr_cost_data["delta"] =  options_tdbastar.delta;
               itr_cost_data["delta_rate"] = cfg["delta_rate"].as<float>();
               itr_cost_data["duration_opt"] = duration_opt.count();
+              itr_cost_data["cost_joint"] = sol.cost;
+              itr_cost_data["sum_cost"] = sum_cost;
               itr_cost_data["duration_discrete"] = duration_discrete.count();
 
               std::ofstream file(stats_file);
@@ -452,6 +454,7 @@ int main(int argc, char* argv[]) {
               itr_cost_data["runs"].push_back(YAML::Node());
               itr_cost_data["runs"][optimization_counter]["iteration"] = optimization_counter;
               itr_cost_data["runs"][optimization_counter]["lowest_cost"] = lowest_cost;
+              itr_cost_data["runs"][optimization_counter]["cost_joint"] = sol.cost;
               itr_cost_data["runs"][optimization_counter]["delta"] = options_tdbastar.delta;
               itr_cost_data["runs"][optimization_counter]["delta_rate"] = cfg["delta_rate"].as<float>();
               itr_cost_data["runs"][optimization_counter]["duration_opt"] = duration_opt.count();
