@@ -33,7 +33,7 @@ def compute_results(instances, algs, results_path, trials, T, regret=False):
 				final_cost_base = None
 				initial_time_base = None
 				if regret:
-					stat_file_base = stat_file.replace(alg, "db-cbs")
+					stat_file_base = stat_file.replace(alg, "db-ecbs")
 					if Path(stat_file_base).exists():
 						with open(stat_file_base) as sf:
 							stats = yaml.safe_load(sf)
