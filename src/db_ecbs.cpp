@@ -446,7 +446,7 @@ int main(int argc, char* argv[]) {
           auto discrete_end = std::chrono::steady_clock::now();
           duration_discrete = discrete_end - discrete_start;
           std::cout << "Time taken for discrete search: " << duration_discrete.count() << " seconds" << std::endl;
-          return 0;
+          // return 0;
           // read the discrete search as initial guess for clustered robots ONLY
           MultiRobotTrajectory discrete_search_sol;
           discrete_search_sol.read_from_yaml(outputFile.c_str());
@@ -489,7 +489,7 @@ int main(int argc, char* argv[]) {
                 stats << "    duration_tdbastar_eps: "  << duration_discrete.count() << "\n";
                 stats << "    duration_opt: " << duration_opt.count() << "\n";
                 stats.flush(); 
-                // return 0;
+                return 0;
                 if(check_anytime){
                   std::string tmp_File1 = output_folder + "/discrete_" + std::to_string(iteration) + ".yaml";
                   discrete_search_sol.to_yaml_format(tmp_File1.c_str());
@@ -499,7 +499,7 @@ int main(int argc, char* argv[]) {
                 }
               }
               // extract motions from the solution
-              extract_motion_primitives(problem, optimization_sol, sub_motions, robots, /*length*/1);
+              extract_motion_primitives(problem, optimization_sol, sub_motions, robots, /*length*/8);
               itr_cost_data["runs"].push_back(YAML::Node());
               itr_cost_data["runs"][iteration]["iteration"] = iteration;
               itr_cost_data["runs"][iteration]["lowest_cost"] = lowest_cost;
@@ -513,6 +513,8 @@ int main(int argc, char* argv[]) {
                   std::cerr << "Error: Unable to open file for writing." << std::endl;
               }
             }
+            std::cout << "optimization failed" << std::endl;
+            return 0;
             break; // continue with the next iteration
           }
           // cbs-style/greedy optimization
