@@ -41,6 +41,7 @@ def run_checker(filename_env, filename_result, filename_log):
 					"--goal_tol" , "999",
 					"--u_bound_tol", "0.3",
 					"--x_bound_tol", "0.3",
+                    "--traj_tol", "100",
 					"--col_tol", "0.01"]
 		print(subprocess.list2cmdline(cmd))
 		out = subprocess.run(cmd,
@@ -186,28 +187,31 @@ def run_dbcbs(filename_env, folder, task, cfg):
                     result = subprocess.run(cmd, timeout=timelimit, stdout=logfile, stderr=logfile)
                 t_dbcbs_stop = time.time()
                 duration_dbcbs += t_dbcbs_stop - t_dbcbs_start
-                with open(filename_result_dbcbs, "r") as f:
-                    results_dbcbs = yaml.load(f,Loader=yaml.CSafeLoader)
+                if filename_result_dbcbs.exists():
+                    with open(filename_result_dbcbs, "r") as f:
+                        results_dbcbs = yaml.load(f,Loader=yaml.CSafeLoader)
 
-                if result.returncode != 0 and results_dbcbs["result"][0]["states"] is None:
-                    print("db-cbs failed ", result.returncode)
-                
-                else:
-                    
-                    cost = results_dbcbs["cost"]
-                    expansions = results_dbcbs["expansions"]
-                    now = time.time()
-                    t = now - start
-                    print("success!", t, ", instance:", task.instance["name"], " trial: ", task.trial)                    
-                    stats.write("  - duration_dbcbs: {}\n".format(t))
-                    stats.write("    delta_0: {}\n".format(delta))
-                    stats.write("    delta_rate: {}\n".format(delta_rate))
-                    stats.write("    payload_cfg: {}\n".format(payload_cfg)) 
-                    stats.write("    cost: {}\n".format(cost))
-                    stats.write("    expansions: {}\n".format(expansions))
-                    stats.flush()
-                    return True
-             
+                        if result.returncode != 0 and results_dbcbs["result"][0]["states"] is None:
+                            print("db-cbs failed ", result.returncode)
+                        
+                        else:
+                            
+                            cost = results_dbcbs["cost"]
+                            expansions = results_dbcbs["expansions"]
+                            now = time.time()
+                            t = now - start
+                            print("success!", t, ", instance:", task.instance["name"], " trial: ", task.trial)                    
+                            stats.write("  - duration_dbcbs: {}\n".format(t))
+                            stats.write("    delta_0: {}\n".format(delta))
+                            stats.write("    delta_rate: {}\n".format(delta_rate))
+                            stats.write("    payload_cfg: {}\n".format(payload_cfg)) 
+                            stats.write("    cost: {}\n".format(cost))
+                            stats.write("    expansions: {}\n".format(expansions))
+                            stats.flush()
+                            return True
+                else: 
+                    print("dbcbs failed in: ", ", instance:", task.instance["name"], " trial: ", task.trial, ", result_dbcbs.yaml is not found")                    
+                    return False
             except subprocess.TimeoutExpired:
                 print(f"db-cbs timed out after {timelimit} seconds")
                 if filename_result_dbcbs_opt.exists():
@@ -231,32 +235,35 @@ def run_dbcbs(filename_env, folder, task, cfg):
                             return True
 
 
-                print("No valid results found after timeout.")
+                print("No valid results found after timeout in ",  "instance:", task.instance["name"], " trial: ", task.trial)
                 return False
             
             except:
-                with open(filename_result_dbcbs, "r") as f:
-                    results_dbcbs = yaml.load(f,Loader=yaml.CSafeLoader)
+                if filename_result_dbcbs.exists():
+                    with open(filename_result_dbcbs, "r") as f:
+                        results_dbcbs = yaml.load(f,Loader=yaml.CSafeLoader)
 
-                if results_dbcbs["result"][0]["states"] is None:
-                    print("db-cbs failed ", result.returncode)
-                    print("Failure!")
-                    return False
+                    if results_dbcbs["result"][0]["states"] is None:
+                        print("db-cbs failed ", result.returncode)
+                        print("Failure!")
+                        return False
+                    else:
+                        cost = results_dbcbs["cost"]
+                        expansions = results_dbcbs["expansions"]
+                        now = time.time()
+                        t = now - start
+                        print("success!", t, ", instance:", task.instance["name"], " trial: ", task.trial)                    
+                        stats.write("  - duration_dbcbs: {}\n".format(t))
+                        stats.write("    delta_0: {}\n".format(delta))
+                        stats.write("    delta_rate: {}\n".format(delta_rate))
+                        stats.write("    payload_cfg: {}\n".format(payload_cfg)) 
+                        stats.write("    cost: {}\n".format(cost))
+                        stats.write("    expansions: {}\n".format(expansions))
+                        stats.flush()
+                        return True
                 else:
-                    cost = results_dbcbs["cost"]
-                    expansions = results_dbcbs["expansions"]
-                    now = time.time()
-                    t = now - start
-                    print("success!", t, ", instance:", task.instance["name"], " trial: ", task.trial)                    
-                    stats.write("  - duration_dbcbs: {}\n".format(t))
-                    stats.write("    delta_0: {}\n".format(delta))
-                    stats.write("    delta_rate: {}\n".format(delta_rate))
-                    stats.write("    payload_cfg: {}\n".format(payload_cfg)) 
-                    stats.write("    cost: {}\n".format(cost))
-                    stats.write("    expansions: {}\n".format(expansions))
-                    stats.flush()
-                    return True
-                    
+                    print("dbcbs failed in: ", ", instance:", task.instance["name"], " trial: ", task.trial, ", result_dbcbs.yaml is not found")                    
+                    return False
 def execute_task(task: ExecutionTask):
     scripts_path = Path("../scripts")
     results_path = Path("../stats_db")
@@ -312,6 +319,7 @@ def execute_task(task: ExecutionTask):
                 env_dict = yaml.safe_load(f)
 
             env_joint_robot_path = result_folder / "env.yaml"
+            env_joint_robot_path_checker = result_folder / "env_traj_checker.yaml"
 
             robot_type = env_dict["joint_robot"][0]["type"]
 
@@ -337,7 +345,8 @@ def execute_task(task: ExecutionTask):
                     print("Visualizing the controller output......")
                     visualize_unicycles(str(env_joint_robot_path), result_folder / "trajectory_opt.yaml", reference_traj=result_folder / "result_dbcbs_opt.yaml", visualize_controller_out=True)
             if control_success:
-                run_checker(str(env_joint_robot_path), result_folder / "trajectory_opt.yaml", (result_folder / "trajectory_opt.yaml").with_suffix(".check.txt"))
+                run_checker(str(env_joint_robot_path_checker), result_folder / "trajectory_opt.yaml", (result_folder / "trajectory_opt.yaml").with_suffix(".check.txt"))
+                # run_checker(str(env_joint_robot_path), result_folder / "trajectory_opt.yaml", (result_folder / "trajectory_opt.yaml").with_suffix(".check.txt"))
         else: 
             print(f"db-cbs failed in {task.instance['name']}, trial {task.trial}")
     else: 
@@ -377,48 +386,48 @@ def main():
         {"name": "wall_6robots_unicycle", "model": "unicyclesWithRods_6_no_right.yaml"},
 
         # {"name": "lego_2robots_unicycle", "model": "unicyclesWithRods_2_big.yaml"},
-        # {"name": "lego_3robots_unicycle", "model": "unicyclesWithRods_3.yaml"},
+        # {"name": "lego_3robots_unicycle", "model": "unicyclesWithRods_3_big.yaml"},
     ]
 
     db_params = [    
-        {"delta_0": 0.9, "delta_rate": 0.95, "num_primitives_0": 1000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": True, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_2robots
-        {"delta_0": 0.9, "delta_rate": 0.95, "num_primitives_0": 1000, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_3robots
-        {"delta_0": 0.9, "delta_rate": 0.95, "num_primitives_0": 1000, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_4robots
-        {"delta_0": 0.9, "delta_rate": 0.95, "num_primitives_0": 5000, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_5robots
-        {"delta_0": 0.9, "delta_rate": 0.95, "num_primitives_0": 2000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_6robots
+        {"delta_0": 0.9, "delta_rate": 0.95, "num_primitives_0": 1000, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_2robots
+        {"delta_0": 0.9, "delta_rate": 0.95, "num_primitives_0": 3000, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_3robots
+        {"delta_0": 0.9, "delta_rate": 0.99, "num_primitives_0": 4400, "num_primitives_rate": 1.1, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_4robots
+        {"delta_0": 0.9, "delta_rate": 0.99, "num_primitives_0": 5000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_5robots
+        {"delta_0": 0.9, "delta_rate": 0.99, "num_primitives_0": 5000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-1.0,0,0],  "tol":0.9}}, # window_6robots
         
-        {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 1000, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-0.5,0,0],  "tol":0.85}}, # forest_2robots
-        {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 1000, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-0.5,0,0],  "tol":0.85}}, # forest_3robots
-        {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 1000, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-0.5,0,0],  "tol":0.85}}, # forest_4robots
-        {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 1000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-0.5,0,0],  "tol":0.85}}, # forest_5robots
-        {"delta_0": 0.85, "delta_rate": 0.9, "num_primitives_0": 1000, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-0.5,0,0],  "tol":0.85}}, # forest_6robots
+        {"delta_0": 0.9, "delta_rate": 0.99, "num_primitives_0": 2500, "num_primitives_rate": 1.1, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-0.5,0,0],  "tol":0.9}}, # forest_2robots
+        {"delta_0": 0.9, "delta_rate": 0.99, "num_primitives_0": 4500, "num_primitives_rate": 1.1, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-0.5,0,0],  "tol":0.9}}, # forest_3robots
+        {"delta_0": 0.9, "delta_rate": 0.99, "num_primitives_0": 4500, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-0.5,0,0],  "tol":0.9}}, # forest_4robots
+        {"delta_0": 0.9, "delta_rate": 0.99, "num_primitives_0": 2000, "num_primitives_rate": 2.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-0.5,0,0],  "tol":0.9}}, # forest_5robots
+        {"delta_0": 0.9, "delta_rate": 0.99, "num_primitives_0": 4500, "num_primitives_rate": 1.1, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "p0_init_guess": [-0.5,0,0],  "tol":0.9}}, # forest_6robots
     
-        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.3}},  # window_2robots_unicycle
-        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.3}},  # window_3robots_unicycle
-        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.3}},  # window_4robots_unicycle
-        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.3}},  # window_5robots_unicycle
-        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.3}}, # window_6robots_unicycle
+        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 300, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.3}},  # window_2robots_unicycle
+        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 300, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.3}},  # window_3robots_unicycle
+        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 300, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.3}},  # window_4robots_unicycle
+        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 300, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.3}},  # window_5robots_unicycle
+        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 1000, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False,"tol": 0.3}}, # window_6robots_unicycle
         
-        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False,  "tol": 0.3}}, # forest_2robots_unicycle
-        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False,  "tol": 0.3}},  # forest_3robots_unicycle
-        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False,  "tol": 0.3}},  # forest_4robots_unicycle
-        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False,  "tol": 0.3}},  # forest_5robots_unicycle
-        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False,  "tol": 0.3}},  # forest_6robots_unicycle
+        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False,  "tol": 0.3}}, # forest_2robots_unicycle
+        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False,  "tol": 0.3}},  # forest_3robots_unicycle
+        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False,  "tol": 0.3}},  # forest_4robots_unicycle
+        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False,  "tol": 0.3}},  # forest_5robots_unicycle
+        {"delta_0": 0.3, "delta_rate": 0.9, "num_primitives_0": 500, "num_primitives_rate": 1.5, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False,  "tol": 0.3}},  # forest_6robots_unicycle
 
-        {"delta_0": 0.3,  "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.3}},  #wall_2robots_unicycle
+        {"delta_0": 0.25,  "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.25 }},  #wall_2robots_unicycle
         {"delta_0": 0.25, "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.25}},  #wall_3robots_unicycle
         {"delta_0": 0.25, "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.25}},  #wall_4robots_unicycle
-        {"delta_0": 0.25, "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.25}},  #wall_5robots_unicycle
-        {"delta_0": 0.25, "delta_rate": 0.9, "num_primitives_0": 100, "num_primitives_rate": 1.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.25}}, #wall_6robots_unicycle
+        {"delta_0": 0.5, "delta_rate": 0.99, "num_primitives_0": 200, "num_primitives_rate": 1.1, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": True, "tol": 0.5}},  #wall_5robots_unicycle
+        {"delta_0": 0.5, "delta_rate": 0.99, "num_primitives_0": 200, "num_primitives_rate": 1.1, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False, "tol": 0.5}},  #wall_5robots_unicycle
 
 
         # {"delta_0": 0.3, "delta_rate": 0.99, "num_primitives_0": 100, "num_primitives_rate": 2.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False,  "tol": 0.3}},  # lego_2robots_unicycle
-        # {"delta_0": 0.3, "delta_rate": 0.99, "num_primitives_0": 500, "num_primitives_rate": 2.2, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": False,  "tol": 0.3}},  # lego_2robots_unicycle
+        # {"delta_0": 0.4, "delta_rate": 0.99, "num_primitives_0": 220, "num_primitives_rate": 1.1, "heuristic1": "no-reverse-search", "payload": {"solve_p0": True, "anytime": True,  "tol": 0.4}},  # lego_2robots_unicycle
 
     ] 
 
 
-    trials = 10
+    trials = 25
     timelimit = 400 # [s]
     tasks = []
     for instance, db in zip(instances, db_params):
@@ -426,7 +435,7 @@ def main():
             tasks.append(ExecutionTask(instance, db, trial, timelimit))
 
     if parallel and len(tasks) > 1:
-        use_cpus = psutil.cpu_count(logical=False) - 1
+        use_cpus = psutil.cpu_count(logical=False) - 10
         print("Using {} CPUs".format(use_cpus))
         with mp.Pool(use_cpus) as p:
             for _ in tqdm.tqdm(p.imap_unordered(execute_task, tasks)):
