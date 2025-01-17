@@ -320,7 +320,7 @@ void export_solutions(const std::vector<LowLevelPlan<dynobench::Trajectory>>& so
       *out << indent << "states:" << std::endl;
       for (size_t j = 0; j < tmp_states.size(); ++j){
         if(residual_forse){
-          tmp_states.at(j).conservativeResize(tmp_states.at(j).size() + 1);
+          // tmp_states.at(j).conservativeResize(tmp_states.at(j).size() + 1);
           tmp_states.at(j)(tmp_states.at(j).size() - 1) = 0;
         }
         *out << indent << "  - " << tmp_states.at(j).format(dynobench::FMT) << std::endl;

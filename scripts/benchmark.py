@@ -193,6 +193,7 @@ def main():
 		"drone12c",
 		"drone16c",
 		"drone24c",
+		"drone28c",
 		"drone32c",
 	]
 
@@ -210,7 +211,7 @@ def main():
 		"db-ecbs",
 	]
 	trials = 1 
-	timelimit = 60*60*3 
+	timelimit = 2*60*60 
 
 	tasks = []
 	for instance in instances:
@@ -228,8 +229,8 @@ def main():
 		for task in tasks:
 			execute_task(task)
 	
-	# run_benchmark_stats(instances, algs, trials, timelimit)
-	# write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit)
+	run_benchmark_stats(instances, algs, trials, timelimit)
+	write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit)
 # 
 	# subprocess.run(
 		# ['pdftk',

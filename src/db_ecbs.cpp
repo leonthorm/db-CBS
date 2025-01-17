@@ -287,6 +287,7 @@ int main(int argc, char* argv[]) {
     problem.goals = problem_original.goals;
     options_tdbastar.delta = cfg["delta_0"].as<float>();
     options_tdbastar.max_motions = cfg["num_primitives_0"].as<size_t>();
+    options_tdbastar.max_expands = 5000; // limit the low-level node expansion
     stats << "stats: " << "\n";
     for (size_t iteration = 0; ; ++iteration) {
       std::cout << "iteration: " << iteration << std::endl;
@@ -442,7 +443,7 @@ int main(int argc, char* argv[]) {
           std::cout << "Final solution from db-ecbs!" << std::endl; 
           create_dir_if_necessary(outputFile);
           std::ofstream out_db(outputFile);
-          export_solutions(P.solution, &out_db);
+          export_solutions(P.solution, &out_db, residual_force); // 0 the f
           auto discrete_end = std::chrono::steady_clock::now();
           duration_discrete = discrete_end - discrete_start;
           std::cout << "Time taken for discrete search: " << duration_discrete.count() << " seconds" << std::endl;
