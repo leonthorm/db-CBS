@@ -206,7 +206,7 @@ int main(int argc, char* argv[]) {
           options_tdbastar.motionsFile = all_motionsFile[i];
           load_motion_primitives_new(options_tdbastar.motionsFile, *robot, robot_motions[problem.robotTypes[i]], 
                                       /*options_tdbastar.max_motions*/1e6,
-                                      options_tdbastar.cut_actions, /*shuffle*/true, options_tdbastar.check_cols);
+                                      options_tdbastar.cut_actions, /*shuffle*/false, options_tdbastar.check_cols);
            // get the needed submotions for the search part
           motion_to_motion(robot_motions[problem.robotTypes[i]], sub_motions[problem.robotTypes[i]], *robot, options_tdbastar.max_motions);
       }
