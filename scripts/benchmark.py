@@ -229,8 +229,8 @@ def main():
 		for task in tasks:
 			execute_task(task)
 	
-	run_benchmark_stats(instances, algs, trials, timelimit)
-	write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit)
+	# run_benchmark_stats(instances, algs, trials, timelimit)
+	# write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit)
 # 
 	# subprocess.run(
 		# ['pdftk',
