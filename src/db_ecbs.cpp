@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
     duration duration_discrete, duration_opt;
 
     YAML::Node cfg = YAML::LoadFile(cfgFile);
-    // cfg = cfg["db-ecbs"]["default"];
+    cfg = cfg["db-ecbs"]["default"];
     float alpha = cfg["alpha"].as<float>();
     bool filter_duplicates = cfg["filter_duplicates"].as<bool>();
     fs::path output_path(outputFile);
@@ -443,7 +443,7 @@ int main(int argc, char* argv[]) {
           std::cout << "Final solution from db-ecbs!" << std::endl; 
           create_dir_if_necessary(outputFile);
           std::ofstream out_db(outputFile);
-          export_solutions(P.solution, &out_db, residual_force); // 0 the f
+          export_solutions(P.solution, &out_db); 
           auto discrete_end = std::chrono::steady_clock::now();
           duration_discrete = discrete_end - discrete_start;
           std::cout << "Time taken for discrete search: " << duration_discrete.count() << " seconds" << std::endl;

@@ -306,7 +306,7 @@ void createConstraintsFromConflicts(const Conflict& early_conflict, std::map<siz
 }
 // assumes if residual force, then add 0 to all robots, only homogeneous robots for now
 void export_solutions(const std::vector<LowLevelPlan<dynobench::Trajectory>>& solution, 
-                      std::ofstream *out, bool residual_forse = false){
+                      std::ofstream *out){
     float cost = 0;
     std::string indent = "  ";
     for (auto& n : solution)
@@ -319,10 +319,6 @@ void export_solutions(const std::vector<LowLevelPlan<dynobench::Trajectory>>& so
       *out << "-" << std::endl;
       *out << indent << "states:" << std::endl;
       for (size_t j = 0; j < tmp_states.size(); ++j){
-        if(residual_forse){
-          // tmp_states.at(j).conservativeResize(tmp_states.at(j).size() + 1);
-          tmp_states.at(j)(tmp_states.at(j).size() - 1) = 0;
-        }
         *out << indent << "  - " << tmp_states.at(j).format(dynobench::FMT) << std::endl;
       }
       *out << indent << "actions:" << std::endl;
