@@ -191,7 +191,7 @@ def main():
 		"drone8c",
 		"drone10c",
 		"drone12c",
-		"drone16c",
+		# "drone16c",
 		# "drone24c",
 		# "drone28c",
 		# "drone32c",
@@ -210,7 +210,7 @@ def main():
 		# "db-cbs",
 		"db-ecbs",
 	]
-	trials = 1 
+	trials = 5 
 	timelimit = 60*60 
 
 	tasks = []
