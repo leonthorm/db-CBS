@@ -224,6 +224,106 @@ def write_table(rows, algs, results_path, fname, trials, T, regret=False):
 	# run pdflatex
 	gen_pdf(output_path)
 
+# for T-RO, adding T-RO 2018 results into table manually
+# hard-coded for ellipsoid, residual and MAPF/C+POST (T-RO 2018 benchmark)
+def write_table_manual(rows, algs, results_path, fname, trials, T, regret=False):
+
+	result = compute_results(rows, algs, results_path, trials, T, regret)
+	# manually enter results for tro-18
+	result_d2 = result["drone1c"]
+	result_d2["tro-18"] = {
+		'success': 0.5,
+		't^st_median': None,
+		'tr^st_median': None,
+		'J^st_median': None,
+		'Jr^st_median': None,
+		'J^f_median': None,
+		'Jr^f_median': None,
+	}
+	
+	output_path = Path(results_path) / Path(fname)
+	with open(output_path.with_suffix(".tex"), "w") as f:
+
+		f.write(r"\documentclass{standalone}")
+		f.write("\n")
+		f.write(r"\begin{document}")
+		f.write("\n")
+		f.write(r"% GENERATED - DO NOT EDIT - " + output_path.name + "\n")
+
+		alg_names = {key: get_alg_name(key) for key in algs}
+		# manually enter for the tro-18
+		algs.append("tro-18")
+		alg_names["tro-18"] = "MARF/C+POST"
+
+
+		out = r"\begin{tabular}{c || c"
+		for alg in algs:
+			if not regret:
+				out += r" || r|r|r|r"
+			else:
+				out += r" || r|r|r"
+		out += "}\n"
+		f.write(out)
+		out = r"\# & Instance"
+		for k, alg in enumerate(algs):
+			if k == len(algs) - 1:
+				if not regret:
+					out += r" & \multicolumn{4}{c}{"
+				else:
+					out += r" & \multicolumn{3}{c}{"
+			else:
+				if not regret:
+					out += r" & \multicolumn{4}{c||}{"
+				else:
+					out += r" & \multicolumn{3}{c||}{"
+			out += alg_names[alg]
+			out += r"}"
+
+		out += r"\\"
+		f.write(out)
+		out = r"& "
+		if not regret:
+			for alg in algs:
+				out += r" & $p$ & $t^{\mathrm{st}} [s]$ & $J^{\mathrm{st}} [s]$ & $J^{f} [s]$"
+		else:
+			for alg in algs:
+				out += r" & $p$ & $t_r^{\mathrm{st}} [\%]$ & $J_r^{f} [\%]$"
+
+		out += r"\\"
+		f.write(out)
+		f.write(r"\hline")
+
+		for r_number, row in enumerate(rows):
+
+			out = ""
+			out += r"\hline"
+			out += "\n"
+			out += "{} & ".format(r_number+1)
+			out += "{} ".format(row.replace("_", "\_"))
+
+			for alg in algs:
+
+				if not regret:
+					out = print_and_highlight_best_max(out, 'success', result[row], alg, algs)
+					out = print_and_highlight_best(out, 't^st_median', result[row], alg, algs)
+					out = print_and_highlight_best(out, 'J^st_median', result[row], alg, algs)
+					out = print_and_highlight_best(out, 'J^f_median', result[row], alg, algs)
+				else:
+					out = print_and_highlight_best_max(out, 'success', result[row], alg, algs)
+					out = print_and_highlight_best(out, 'tr^st_median', result[row], alg, algs)
+					out = print_and_highlight_best(out, 'Jr^f_median', result[row], alg, algs)
+
+			out += r"\\"
+			f.write(out)
+
+		f.write("\n")
+		f.write(r"\end{tabular}")
+		f.write("\n")
+		f.write(r"\end{document}")
+
+	# run pdflatex
+	gen_pdf(output_path)
+
 def main():
 	results_path = Path("../results")
 

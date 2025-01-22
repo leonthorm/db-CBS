@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import benchmark_table
-from benchmark_table import write_table
+from benchmark_table import write_table, write_table_manual
 import os
 import shutil
 
@@ -288,7 +288,7 @@ def write_table6(trials, timelimit, result_path):
 			src_folder = result_path + "/" + alg + "/" + ins
 			shutil.copytree(src_folder, tmp_folder, dirs_exist_ok=True)
 
-	write_table(instances, algs, Path(tmp_path), "paper_table2.pdf", trials, timelimit)
+	write_table_manual(instances, algs, Path(tmp_path), "paper_table2.pdf", trials, timelimit)
 	# copy the pdf, latex and delete the tmp folder
 	for item in os.listdir(tmp_path):
 		# Check if the item starts with the base name
@@ -299,7 +299,7 @@ def write_table6(trials, timelimit, result_path):
 			shutil.copy2(src_path, dest_path)
 			print(f"Copied '{src_path}' to '{dest_path}'.")
 	# delete the folder
-	shutil.rmtree(tmp_path)
+	# shutil.rmtree(tmp_path)
 
 # table for tro. It has the notion of regret w.r.t db-ecbs, and skips it in the table since it's always 0
 def write_table7(trials, timelimit):
@@ -423,15 +423,15 @@ def write_table7(trials, timelimit):
 
 	benchmark_table.gen_pdf(output_path)
 if __name__ == '__main__':
-	trials = 1
+	trials = 10
 	timelimit = 10*60
 	# write_table1(trials, timelimit)
 	# write_table2(trials, timelimit)
 	# write_table3(trials, timelimit)
 	# write_table4(trials, timelimit)
 	# write_table5(trials, timelimit)
-	# write_table6(trials, timelimit, "/home/akmarak-laptop/IMRC/db-CBS/results")
-	write_table7(trials, timelimit)
+	write_table6(trials, timelimit, "/home/akmarak-laptop/IMRC/db-CBS/results")
+	# write_table7(trials, timelimit)
 
 
 
