@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import benchmark_table
-from benchmark_table import write_table, write_table_manual
+from benchmark_table import write_table
 import os
 import shutil
 
@@ -344,7 +344,7 @@ def write_table6(trials, timelimit):
 		'J^f_median': None,
 		'Jr^f_median': None,
 	}
-	
+
 	result = benchmark_table.compute_results(instances, algs, Path("../results"), trials, timelimit, True)
 	output_path = Path("../results/paper_table2.pdf")
 	with open(output_path.with_suffix(".tex"), "w") as f:
