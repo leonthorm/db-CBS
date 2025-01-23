@@ -267,39 +267,160 @@ def write_table5(trials, timelimit):
 
 # for Ellipsoid vs. residual, when each run has been done separately,
 # and the final format has ellipsoid/instances, residual/instances
-def write_table6(trials, timelimit, result_path):
+def write_table6(trials, timelimit):
+	regret = False
 	instances = [
-		"drone1c",
-		# "drone2c",
-		# "drone4c",
-		# "drone8c",
-		# "drone10c",
+		"drone2c",
+		"drone4c",
+		"drone8c",
+		"drone10c",
+		"drone12c",
 	]
 	algs = [
-		"ellipsoid",
-		"residual",
+		"db-ecbs-conservative",
+		"db-ecbs-residual",
+		"tro-18",
 	]
-	tmp_path = result_path + "/tmp_result"
-	os.makedirs(tmp_path, exist_ok=True)
-	for ins in instances: 
-		for alg in algs:
-			tmp_folder = tmp_path + "/" + ins + "/" + alg
-			os.makedirs(tmp_folder, exist_ok=True)
-			src_folder = result_path + "/" + alg + "/" + ins
-			shutil.copytree(src_folder, tmp_folder, dirs_exist_ok=True)
+	# map to a shorter name for the table
+	alg_names = {
+		"db-ecbs-conservative": "db-ECBS-C",
+		"db-ecbs-residual": "db-ECBS-R",
+		"tro-18": "MAPF/C+POST",
+	}
+	result = benchmark_table.compute_results(instances, algs, Path("../results"), trials, timelimit, True)
+	# manually enter results for tro-18
+	result_d2 = result["drone2c"]
+	result_d2["tro-18"] = {
+		'success': 0.5,
+		't^st_median': None,
+		'tr^st_median': None,
+		'J^st_median': None,
+		'Jr^st_median': None,
+		'J^f_median': None,
+		'Jr^f_median': None,
+	}
+	
+	# n = 4
+	result_d4 = result["drone4c"]
+	result_d4["tro-18"] = {
+		'success': 0.5,
+		't^st_median': None,
+		'tr^st_median': None,
+		'J^st_median': None,
+		'Jr^st_median': None,
+		'J^f_median': None,
+		'Jr^f_median': None,
+	}
+	# n = 8
+	result_d8 = result["drone8c"]
+	result_d8["tro-18"] = {
+		'success': 0.5,
+		't^st_median': None,
+		'tr^st_median': None,
+		'J^st_median': None,
+		'Jr^st_median': None,
+		'J^f_median': None,
+		'Jr^f_median': None,
+	}
+	# n = 10
+	result_d10 = result["drone10c"]
+	result_d10["tro-18"] = {
+		'success': 0.5,
+		't^st_median': None,
+		'tr^st_median': None,
+		'J^st_median': None,
+		'Jr^st_median': None,
+		'J^f_median': None,
+		'Jr^f_median': None,
+	}
+	# n = 12
+	result_d12 = result["drone12c"]
+	result_d12["tro-18"] = {
+		'success': 0.5,
+		't^st_median': None,
+		'tr^st_median': None,
+		'J^st_median': None,
+		'Jr^st_median': None,
+		'J^f_median': None,
+		'Jr^f_median': None,
+	}
+	
+	result = benchmark_table.compute_results(instances, algs, Path("../results"), trials, timelimit, True)
+	output_path = Path("../results/paper_table2.pdf")
+	with open(output_path.with_suffix(".tex"), "w") as f:
 
-	write_table_manual(instances, algs, Path(tmp_path), "paper_table2.pdf", trials, timelimit)
-	# copy the pdf, latex and delete the tmp folder
-	for item in os.listdir(tmp_path):
-		# Check if the item starts with the base name
-		if item.startswith("paper_table2"):
-			src_path = os.path.join(tmp_path, item)
-			dest_path = os.path.join(result_path, item)
-			# Copy the file
-			shutil.copy2(src_path, dest_path)
-			print(f"Copied '{src_path}' to '{dest_path}'.")
-	# delete the folder
-	# shutil.rmtree(tmp_path)
+		f.write(r"\documentclass{standalone}")
+		f.write("\n")
+		f.write(r"\begin{document}")
+		f.write("\n")
+		f.write(r"% GENERATED - DO NOT EDIT - " + output_path.name + "\n")
+
+		out = r"\begin{tabular}{c || c"
+		for alg in algs:
+			if not regret:
+				out += r" || r|r|r|r"
+			else:
+				out += r" || r|r|r"
+		out += "}\n"
+		f.write(out)
+		out = r"\# & Instance"
+		for k, alg in enumerate(algs):
+			if k == len(algs) - 1:
+				if not regret:
+					out += r" & \multicolumn{4}{c}{"
+				else:
+					out += r" & \multicolumn{3}{c}{"
+			else:
+				if not regret:
+					out += r" & \multicolumn{4}{c||}{"
+				else:
+					out += r" & \multicolumn{3}{c||}{"
+			out += alg_names[alg]
+			out += r"}"
+
+		out += r"\\"
+		f.write(out)
+		out = r"& "
+		if not regret:
+			for alg in algs:
+				out += r" & $p$ & $t^{\mathrm{st}} [s]$ & $J^{\mathrm{st}} [s]$ & $J^{f} [s]$"
+		else:
+			for alg in algs:
+				out += r" & $p$ & $t_r^{\mathrm{st}} [\%]$ & $J_r^{f} [\%]$"
+
+		out += r"\\"
+		f.write(out)
+		f.write(r"\hline")
+
+		for r_number, row in enumerate(instances): 
+
+			out = ""
+			out += r"\hline"
+			out += "\n"
+			out += "{} & ".format(r_number+1)
+			out += "{} ".format(row.replace("_", "\_"))
+
+			for alg in algs:
+				if not regret:
+					out = benchmark_table.print_and_highlight_best_max(out, 'success', result[row], alg, algs)
+					out = benchmark_table.print_and_highlight_best(out, 't^st_median', result[row], alg, algs)
+					out = benchmark_table.print_and_highlight_best(out, 'J^st_median', result[row], alg, algs)
+					out = benchmark_table.print_and_highlight_best(out, 'J^f_median', result[row], alg, algs)
+				else:
+					out = benchmark_table.print_and_highlight_best_max(out, 'success', result[row], alg, algs)
+					out = benchmark_table.print_and_highlight_best(out, 'tr^st_median', result[row], alg, algs)
+					out = benchmark_table.print_and_highlight_best(out, 'Jr^f_median', result[row], alg, algs)
+
+			out += r"\\"
+			f.write(out)
+
+		f.write("\n")
+		f.write(r"\end{tabular}")
+		f.write("\n")
+		f.write(r"\end{document}")
+
+	# run pdflatex
+	benchmark_table.gen_pdf(output_path)
 
 # table for tro. It has the notion of regret w.r.t db-ecbs, and skips it in the table since it's always 0
 def write_table7(trials, timelimit):
@@ -351,6 +472,7 @@ def write_table7(trials, timelimit):
 	}
 
 	result = benchmark_table.compute_results(instances, algs, Path("../results"), trials, timelimit, True)
+	
 	output_path = Path("../results/paper_table7.pdf")
 	with open(output_path.with_suffix(".tex"), "w") as f:
 
@@ -423,14 +545,14 @@ def write_table7(trials, timelimit):
 
 	benchmark_table.gen_pdf(output_path)
 if __name__ == '__main__':
-	trials = 10
-	timelimit = 10*60
+	trials = 1
+	timelimit = 5*60
 	# write_table1(trials, timelimit)
 	# write_table2(trials, timelimit)
 	# write_table3(trials, timelimit)
 	# write_table4(trials, timelimit)
 	# write_table5(trials, timelimit)
-	write_table6(trials, timelimit, "/home/akmarak-laptop/IMRC/db-CBS/results")
+	write_table6(trials, timelimit)
 	# write_table7(trials, timelimit)
 
 

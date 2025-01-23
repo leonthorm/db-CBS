@@ -179,8 +179,7 @@ int main(int argc, char *argv[]) {
                               /*solution*/tmpNode.multirobot_trajectory, // update the solution
                               DYNOBENCH_BASE,
                               max_conflict_cluster_it->first,
-                              sum_robot_cost,
-                              /*residual force*/true);
+                              sum_robot_cost);
       if(feasible){
         // iv. zero the optimized cluster's conflict, don't remove it
         max_conflict_cluster_index = tmpNode.getIndexOfSet(max_conflict_cluster_it->first);
@@ -229,8 +228,7 @@ int main(int argc, char *argv[]) {
                                   /*solution*/joint_opt_sol, // expected not to be empty, proper size/no augmentation
                                   DYNOBENCH_BASE,
                                   joint_cluster,
-                                  sum_robot_cost,
-                                  /*residual force*/true);
+                                  sum_robot_cost);
             if(joint_feasible){
               auto joint_optimization_end = std::chrono::high_resolution_clock::now();
               std::chrono::duration<double> joint_opt_duration = joint_optimization_end - joint_optimization_start;

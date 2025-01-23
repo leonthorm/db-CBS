@@ -111,6 +111,14 @@ def execute_task(task: ExecutionTask):
 		run_dbecbs(str(env), str(result_folder), task.timelimit, mycfg)
 		visualize_files = [p.name for p in result_folder.glob('result_*')]
 		check_files = [p.name for p in result_folder.glob('result_dbecbs_opt*')]
+	elif task.alg == "db-ecbs-residual":
+		run_dbecbs(str(env), str(result_folder), task.timelimit, mycfg)
+		visualize_files = [p.name for p in result_folder.glob('result_*')]
+		check_files = [p.name for p in result_folder.glob('result_dbecbs_opt*')]
+	elif task.alg == "db-ecbs-conservative":
+		run_dbecbs(str(env), str(result_folder), task.timelimit, mycfg)
+		visualize_files = [p.name for p in result_folder.glob('result_*')]
+		check_files = [p.name for p in result_folder.glob('result_dbecbs_opt*')]
 	
 	# for file in check_files:
 		# if not run_checker(env, result_folder / file, (result_folder / file).with_suffix(".check.txt")):
@@ -208,10 +216,12 @@ def main():
 		# "s2m2",
 		# "k-cbs",
 		# "db-cbs",
-		"db-ecbs",
+		# "db-ecbs",
+		"db-ecbs-residual",
+		"db-ecbs-conservative",
 	]
 	trials = 1 
-	timelimit = 60*60 
+	timelimit = 45*60 
 
 	tasks = []
 	for instance in instances:
@@ -229,8 +239,8 @@ def main():
 		for task in tasks:
 			execute_task(task)
 	
-	# run_benchmark_stats(instances, algs, trials, timelimit)
-	# write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit)
+	run_benchmark_stats(instances, algs, trials, timelimit)
+	write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit)
 # 
 	# subprocess.run(
 		# ['pdftk',
@@ -249,6 +259,7 @@ def main():
 	# paper_tables.write_table3(trials, timelimit)
 	# paper_tables.write_table4(trials, timelimit)
 	# paper_tables.write_table5(trials, timelimit)
+	paper_tables.write_table6(trials, timelimit)
 
 if __name__ == '__main__':
 	main()

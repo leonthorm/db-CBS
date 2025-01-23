@@ -8,7 +8,6 @@ def compute_results(instances, algs, results_path, trials, T, regret=False):
 
 	if isinstance(trials, int):
 		trials = [trials]*len(instances)
-	print(trials)
 
 	for instance, itrials in zip(instances, trials):
 		result = dict()
@@ -66,7 +65,6 @@ def compute_results(instances, algs, results_path, trials, T, regret=False):
 						final_costs.append(last_cost)
 					if last_cost is not None and final_cost_base is not None:
 						final_regrets.append((last_cost - final_cost_base)/last_cost * 100)
-
 			result[alg] = {
 				'success': len(initial_times)/itrials,
 				't^st_median': np.median(initial_times) if len(initial_times) > 0 else None,
@@ -94,9 +92,9 @@ def gen_pdf(output_path):
 def print_and_highlight_best(out, key, result, alg, algs, digits=1):
 	out += " & "
 	is_best = False
-	if result[alg][key] is not None and result[alg][key] is not "*":
+	if result[alg][key] != None and result[alg][key] != "*":
 		# we only look at one digit
-		is_best = np.array([round(result[alg][key],1) <= round(result[other][key],1) for other in algs if result[other][key] is not None and result[other][key] is not "*"]).all()
+		is_best = np.array([round(result[alg][key],1) <= round(result[other][key],1) for other in algs if result[other][key] != None and result[other][key] != "*"]).all()
 	if is_best:
 		out += r"\bfseries "
 	if result[alg][key] == "*":
@@ -110,9 +108,9 @@ def print_and_highlight_best(out, key, result, alg, algs, digits=1):
 def print_and_highlight_best_max(out, key, result, alg, algs, digits=1):
 	out += " & "
 	is_best = False
-	if result[alg][key] is not None and result[alg][key] is not "*":
+	if result[alg][key] != None and result[alg][key] != "*":
 		# we only look at one digit
-		is_best = np.array([round(result[alg][key],1) >= round(result[other][key],1) for other in algs if result[other][key] is not None and result[other][key] is not "*"]).all()
+		is_best = np.array([round(result[alg][key],1) >= round(result[other][key],1) for other in algs if result[other][key] != None and result[other][key] != "*"]).all()
 	if is_best:
 		out += r"\bfseries "
 	if result[alg][key] == "*":
@@ -131,8 +129,8 @@ def get_alg_name(alg_key):
 		"k-cbs": "k-CBS",
 		"db-cbs": "db-CBS",
 		"db-ecbs": "db-ECBS",
-		"ellipsoid": "db-ECBS-E",
-		"residual": "db-ECBS-R"
+		"db-ecbs-conservative": "db-ECBS-C",
+		"db-ecbs-residual": "db-ECBS-R",
 	}
 
 	if alg_key in mapping:
@@ -156,7 +154,7 @@ def write_table(rows, algs, results_path, fname, trials, T, regret=False):
 
 		out = r"\begin{tabular}{c || c"
 		for alg in algs:
-			if (alg == "sst" or alg == "ellipsoid" or alg == "residual") and not regret:
+			if (alg == "sst" or alg == "db-ecbs-conservative" or alg == "db-ecbs-residual") and not regret:
 				out += r" || r|r|r|r"
 			else:
 				out += r" || r|r|r"
@@ -165,12 +163,12 @@ def write_table(rows, algs, results_path, fname, trials, T, regret=False):
 		out = r"\# & Instance"
 		for k, alg in enumerate(algs):
 			if k == len(algs) - 1:
-				if (alg == "sst" or alg == "ellipsoid" or alg == "residual") and not regret:
+				if (alg == "sst" or alg == "db-ecbs-conservative" or alg == "db-ecbs-residual") and not regret:
 					out += r" & \multicolumn{4}{c}{"
 				else:
 					out += r" & \multicolumn{3}{c}{"
 			else:
-				if (alg == "sst" or alg == "ellipsoid" or alg == "residual") and not regret:
+				if (alg == "sst" or alg == "db-ecbs-conservative" or alg == "db-ecbs-residual") and not regret:
 					out += r" & \multicolumn{4}{c||}{"
 				else:
 					out += r" & \multicolumn{3}{c||}{"
@@ -181,7 +179,7 @@ def write_table(rows, algs, results_path, fname, trials, T, regret=False):
 		out = r"& "
 		if not regret:
 			for alg in algs:
-				if alg == "sst" or alg == "ellipsoid" or alg == "residual":
+				if alg == "sst" or alg == "db-ecbs-conservative" or alg == "db-ecbs-residual":
 					out += r" & $p$ & $t^{\mathrm{st}} [s]$ & $J^{\mathrm{st}} [s]$ & $J^{f} [s]$"
 				else:
 					out += r" & $p$ & $t^{\mathrm{st}} [s]$ & $J^{\mathrm{st},f} [s]$"
@@ -206,108 +204,8 @@ def write_table(rows, algs, results_path, fname, trials, T, regret=False):
 					out = print_and_highlight_best_max(out, 'success', result[row], alg, algs)
 					out = print_and_highlight_best(out, 't^st_median', result[row], alg, algs)
 					out = print_and_highlight_best(out, 'J^st_median', result[row], alg, algs)
-					if alg == "sst" or alg == "ellipsoid" or alg == "residual":
+					if alg == "sst" or alg == "db-ecbs-conservative" or alg == "db-ecbs-residual":
 						out = print_and_highlight_best(out, 'J^f_median', result[row], alg, algs)
-				else:
-					out = print_and_highlight_best_max(out, 'success', result[row], alg, algs)
-					out = print_and_highlight_best(out, 'tr^st_median', result[row], alg, algs)
-					out = print_and_highlight_best(out, 'Jr^f_median', result[row], alg, algs)
-
-			out += r"\\"
-			f.write(out)
-
-		f.write("\n")
-		f.write(r"\end{tabular}")
-		f.write("\n")
-		f.write(r"\end{document}")
-
-	# run pdflatex
-	gen_pdf(output_path)
-
-# for T-RO, adding T-RO 2018 results into table manually
-# hard-coded for ellipsoid, residual and MAPF/C+POST (T-RO 2018 benchmark)
-def write_table_manual(rows, algs, results_path, fname, trials, T, regret=False):
-
-	result = compute_results(rows, algs, results_path, trials, T, regret)
-	# manually enter results for tro-18
-	result_d2 = result["drone1c"]
-	result_d2["tro-18"] = {
-		'success': 0.5,
-		't^st_median': None,
-		'tr^st_median': None,
-		'J^st_median': None,
-		'Jr^st_median': None,
-		'J^f_median': None,
-		'Jr^f_median': None,
-	}
-	
-	output_path = Path(results_path) / Path(fname)
-	with open(output_path.with_suffix(".tex"), "w") as f:
-
-		f.write(r"\documentclass{standalone}")
-		f.write("\n")
-		f.write(r"\begin{document}")
-		f.write("\n")
-		f.write(r"% GENERATED - DO NOT EDIT - " + output_path.name + "\n")
-
-		alg_names = {key: get_alg_name(key) for key in algs}
-		# manually enter for the tro-18
-		algs.append("tro-18")
-		alg_names["tro-18"] = "MARF/C+POST"
-
-
-		out = r"\begin{tabular}{c || c"
-		for alg in algs:
-			if not regret:
-				out += r" || r|r|r|r"
-			else:
-				out += r" || r|r|r"
-		out += "}\n"
-		f.write(out)
-		out = r"\# & Instance"
-		for k, alg in enumerate(algs):
-			if k == len(algs) - 1:
-				if not regret:
-					out += r" & \multicolumn{4}{c}{"
-				else:
-					out += r" & \multicolumn{3}{c}{"
-			else:
-				if not regret:
-					out += r" & \multicolumn{4}{c||}{"
-				else:
-					out += r" & \multicolumn{3}{c||}{"
-			out += alg_names[alg]
-			out += r"}"
-
-		out += r"\\"
-		f.write(out)
-		out = r"& "
-		if not regret:
-			for alg in algs:
-				out += r" & $p$ & $t^{\mathrm{st}} [s]$ & $J^{\mathrm{st}} [s]$ & $J^{f} [s]$"
-		else:
-			for alg in algs:
-				out += r" & $p$ & $t_r^{\mathrm{st}} [\%]$ & $J_r^{f} [\%]$"
-
-		out += r"\\"
-		f.write(out)
-		f.write(r"\hline")
-
-		for r_number, row in enumerate(rows):
-
-			out = ""
-			out += r"\hline"
-			out += "\n"
-			out += "{} & ".format(r_number+1)
-			out += "{} ".format(row.replace("_", "\_"))
-
-			for alg in algs:
-
-				if not regret:
-					out = print_and_highlight_best_max(out, 'success', result[row], alg, algs)
-					out = print_and_highlight_best(out, 't^st_median', result[row], alg, algs)
-					out = print_and_highlight_best(out, 'J^st_median', result[row], alg, algs)
-					out = print_and_highlight_best(out, 'J^f_median', result[row], alg, algs)
 				else:
 					out = print_and_highlight_best_max(out, 'success', result[row], alg, algs)
 					out = print_and_highlight_best(out, 'tr^st_median', result[row], alg, algs)
@@ -328,18 +226,20 @@ def main():
 	results_path = Path("../results")
 
 	rows = [
-		"swap1_unicycle",
-		"swap1_trailer",
+		"drone2c",
+		"drone4c",
 	]
 	algs = [
-		"sst",
-		"s2m2",
-		"k-cbs",
-		"db-cbs",
-		"db-ecbs",
+		# "sst",
+		# "s2m2",
+		# "k-cbs",
+		# "db-cbs",
+		# "db-ecbs",
+		"db-ecbs-residual",
+		"db-ecbs-conservative",
 	]
 
-	write_table(rows, algs, results_path, "table.pdf", 1, 5*60)
+	write_table(rows, algs, results_path, "table.pdf", 1, 15*60)
 
 if __name__ == '__main__':
 	main()

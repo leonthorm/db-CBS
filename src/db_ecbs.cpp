@@ -94,7 +94,6 @@ int main(int argc, char* argv[]) {
     bool save_expanded_trajs = cfg["save_expanded_trajs"].as<bool>();
     std::string conflicts_folder = output_folder + "/conflicts";
     Eigen::Vector3d radii = Eigen::Vector3d(.12, .12, .3);
-    bool residual_force = cfg["residual_force"].as<bool>();
     // optimization-related params
     bool sum_robot_cost = true;
     bool feasible = false;
@@ -113,6 +112,9 @@ int main(int argc, char* argv[]) {
     dynobench::Problem problem_original(inputFile);
     std::string models_base_path = DYNOBENCH_BASE + std::string("models/");
     problem.models_base_path = models_base_path;
+    problem.is_residual = cfg["residual_force"].as<bool>(); 
+    problem.is_conservative = cfg["conservative"].as<bool>(); 
+
     Out_info_tdb out_tdb;
     std::cout << "*** options_tdbastar ***" << std::endl;
     options_tdbastar.print(std::cout);
@@ -138,7 +140,7 @@ int main(int argc, char* argv[]) {
     std::string motionsFile;
     std::vector<std::string> all_motionsFile;
 
-    if(residual_force){ // considers only integrator2_3d dynamics
+    if(problem.is_residual){ // considers only integrator2_3d dynamics
       std::vector<double> _start, _goal;
       for(auto &robotType : problem.robotTypes){
         if (robotType == "integrator2_3d_large_v0")
@@ -193,7 +195,7 @@ int main(int argc, char* argv[]) {
     size_t i = 0;
     std::map<size_t, std::vector<size_t>> rob_obj_set;
     for (const auto &robot : robots){
-      if(cfg["conservative"].as<bool>()){
+      if(problem.is_conservative){
         collision_geometries.push_back(std::make_shared<fcl::Ellipsoidd>(radii));
       }
       else
@@ -206,7 +208,7 @@ int main(int argc, char* argv[]) {
           options_tdbastar.motionsFile = all_motionsFile[i];
           load_motion_primitives_new(options_tdbastar.motionsFile, *robot, robot_motions[problem.robotTypes[i]], 
                                       /*options_tdbastar.max_motions*/1e6,
-                                      options_tdbastar.cut_actions, /*shuffle*/false, options_tdbastar.check_cols);
+                                      options_tdbastar.cut_actions, /*shuffle*/true, options_tdbastar.check_cols);
            // get the needed submotions for the search part
           motion_to_motion(robot_motions[problem.robotTypes[i]], sub_motions[problem.robotTypes[i]], *robot, options_tdbastar.max_motions);
       }
@@ -287,23 +289,22 @@ int main(int argc, char* argv[]) {
     problem.goals = problem_original.goals;
     options_tdbastar.delta = cfg["delta_0"].as<float>();
     options_tdbastar.max_motions = cfg["num_primitives_0"].as<size_t>();
-    options_tdbastar.max_expands = 5000; // limit the low-level node expansion
+    options_tdbastar.max_expands = 8000; // limit the low-level node expansion
     stats << "stats: " << "\n";
     for (size_t iteration = 0; ; ++iteration) {
       std::cout << "iteration: " << iteration << std::endl;
       if (iteration > 0) {
-        if (solved_db) {
+        if (solved_db) 
           options_tdbastar.delta *= cfg["delta_0"].as<float>();
-        } 
-        else {
+        else 
           options_tdbastar.delta *= 0.99;
-          options_tdbastar.max_motions *= cfg["num_primitives_rate"].as<float>();
-          options_tdbastar.max_motions = std::min<size_t>(options_tdbastar.max_motions, 1e6);
-          for (auto& iter : robot_motions){
-            for (size_t i = 0; i < problem.robotTypes.size(); ++i){
-              if (iter.first == problem.robotTypes[i]){
-                motion_to_motion(robot_motions[problem.robotTypes[i]], sub_motions[problem.robotTypes[i]], *robots[i], options_tdbastar.max_motions);
-              }
+        // always add motions
+        options_tdbastar.max_motions *= cfg["num_primitives_rate"].as<float>();
+        options_tdbastar.max_motions = std::min<size_t>(options_tdbastar.max_motions, 1e6);
+        for (auto& iter : robot_motions){
+          for (size_t i = 0; i < problem.robotTypes.size(); ++i){
+            if (iter.first == problem.robotTypes[i]){
+              motion_to_motion(robot_motions[problem.robotTypes[i]], sub_motions[problem.robotTypes[i]], *robots[i], options_tdbastar.max_motions);
             }
           }
         }
@@ -339,7 +340,7 @@ int main(int argc, char* argv[]) {
                 out_tdb, robot_id, upper_bounds[robot_id], hs[robot_id], rob_obj_set, /*reverse_search*/false, 
                 expanded_trajs_tmp, tmp_solutions,
                 robots, col_mng_robots, robot_objs,
-                heuristics[robot_id], nullptr, residual_force, options_tdbastar.w);
+                heuristics[robot_id], nullptr, problem.is_residual, options_tdbastar.w);
         if(!out_tdb.solved){
           std::cout << "Couldn't find initial solution for robot " << robot_id << "." << std::endl;
           start_node_valid = false;
@@ -352,7 +353,7 @@ int main(int argc, char* argv[]) {
       if (!start_node_valid) {
             continue;
       }
-      start.focalHeuristic = highLevelfocalHeuristicState(start.solution, robots, problem.robotTypes, col_mng_robots, robot_objs, residual_force); 
+      start.focalHeuristic = highLevelfocalHeuristicState(start.solution, robots, problem.robotTypes, col_mng_robots, robot_objs, problem.is_residual); 
       
       openset_t open;
       focalset_t focal;
@@ -438,7 +439,7 @@ int main(int argc, char* argv[]) {
         Conflict inter_robot_conflict;
         std::map<size_t, std::vector<Constraint>> constraints;
         if (!getEarliestConflict(P.solution, robots, col_mng_robots, robot_objs, inter_robot_conflict)
-          && (!residual_force || !getEarliestViolations(P.solution, problem.robotTypes, constraints))){
+          && (!problem.is_residual || !getEarliestViolations(P.solution, problem.robotTypes, constraints))){
           solved_db = true;
           std::cout << "Final solution from db-ecbs!" << std::endl; 
           create_dir_if_necessary(outputFile);
@@ -464,8 +465,7 @@ int main(int argc, char* argv[]) {
                                       /*solution*/optimization_sol,
                                       DYNOBENCH_BASE,
                                       cluster,
-                                      sum_robot_cost,
-                                      residual_force);
+                                      sum_robot_cost);
             if(feasible){
               std::cout << "Joint optimization is done" << std::endl;
               auto end = std::chrono::steady_clock::now();
@@ -490,7 +490,7 @@ int main(int argc, char* argv[]) {
                 stats << "    duration_tdbastar_eps: "  << duration_discrete.count() << "\n";
                 stats << "    duration_opt: " << duration_opt.count() << "\n";
                 stats.flush(); 
-                return 0;
+                // return 0;
                 if(check_anytime){
                   std::string tmp_File1 = output_folder + "/discrete_" + std::to_string(iteration) + ".yaml";
                   discrete_search_sol.to_yaml_format(tmp_File1.c_str());
@@ -515,153 +515,8 @@ int main(int argc, char* argv[]) {
               }
             }
             std::cout << "optimization failed" << std::endl;
-            return 0;
+            // return 0;
             break; // continue with the next iteration
-          }
-          // cbs-style/greedy optimization
-          if(cfg["execute_greedy_optimization"].as<bool>()){
-            // I. Parallel/Independent optimization
-            auto optimization_start = std::chrono::steady_clock::now();
-            std::vector<double> min_ = env["environment"]["min"].as<std::vector<double>>();
-            std::vector<double> max_ = env["environment"]["max"].as<std::vector<double>>();
-            Options_trajopt options_trajopt;
-            options_trajopt.solver_id = 0; // 1 - no moving obstacles 
-            options_trajopt.control_bounds = 1;
-            options_trajopt.use_warmstart = 1;
-            options_trajopt.weight_goal = 400;
-            options_trajopt.max_iter = 50;
-            // options_trajopt.collision_weight = 0; 
-            options_trajopt.soft_control_bounds = true; 
-            MultiRobotTrajectory parallel_multirobot_sol;
-            parallel_multirobot_sol.trajectories.resize(num_robots);
-            // since homogen. robots
-            Result_opti opti_out;
-            dynobench::Problem tmp_problem;
-            tmp_problem.models_base_path = problem.models_base_path;
-            tmp_problem.robotType = problem.robotTypes.at(0);
-            tmp_problem.p_lb = problem.p_lb;
-            tmp_problem.p_ub = problem.p_ub;
-            tmp_problem.robotTypes.push_back(problem.robotTypes.at(0)); 
-            tmp_problem.obstacles = problem.obstacles;
-
-            for (size_t i = 0; i < num_robots; i++){
-              tmp_problem.goal = problem.goals[i];
-              tmp_problem.start = problem.starts[i];
-              opti_out.success = false;
-              trajectory_optimization(tmp_problem, P.solution.at(i).trajectory, options_trajopt, parallel_multirobot_sol.trajectories.at(i),
-                          opti_out);
-              if(!opti_out.success) 
-                std::cout << "failure of parallel/independent optimization for robot " << i << std::endl;
-            }
-            parallel_multirobot_sol.to_yaml_format("/tmp/dynoplan/parallel_multirobot_sol.yaml");
-            // CBS-style optimization
-            typename boost::heap::d_ary_heap<HighLevelNodeOptimization, boost::heap::arity<2>,
-                                        boost::heap::mutable_<true> > open_opt;
-            HighLevelNodeOptimization tmp (num_robots, num_robots);
-            tmp.multirobot_trajectory = parallel_multirobot_sol;
-            tmp.cost = parallel_multirobot_sol.get_cost();
-            if (!getConflicts(tmp.multirobot_trajectory.trajectories, robots, col_mng_robots, robot_objs, tmp.conflict_matrix)){
-              std::cout << "No inter-robot conflict in the root node" << std::endl;
-              tmp.multirobot_trajectory.to_yaml_format(optimizationFile.c_str());
-              return 0;
-            }
-            bool moving_obstacles = false;
-            std::vector<int> cluster_tracking(num_robots + 1, 0);
-            HighLevelNodeOptimization tmpNode = tmp;
-            int max_conflict_cluster_index;
-            int index_i, index_j;
-            // i. initialize clusters using conflict mtrx. ONLY in-conflict robots belong to clusters
-            std::cout << "initializing the tmpNode clusters" << std::endl;
-            for (size_t i = 0; i < num_robots; i++){
-              for (size_t j = 0; j <= i; j++){
-                if(tmp.conflict_matrix[i][j] > 0){
-                  // option 1.
-                  tmpNode.clusters.push_back({{i, j}, tmp.conflict_matrix[i][j]}); 
-                  std::cout << "(" << i << " " << j << " " << "conflict value: " << tmp.conflict_matrix[i][j] << ")" <<  std::endl;
-                }
-              }
-            }
-            
-            while(true){
-              // ii. extract the MAX conflict cluster
-              auto max_conflict_cluster_it = std::max_element(tmpNode.clusters.begin(), tmpNode.clusters.end(),
-                                            [](std::pair<std::unordered_set<size_t>, int>& a, std::pair<std::unordered_set<size_t>, int>& b) {
-                                 return a.second < b.second; }); // compared based on conflicts
-              // DEBUG
-              if(max_conflict_cluster_it->first.size())
-                cluster_tracking.at(max_conflict_cluster_it->first.size()) += 1;
-              std::cout << "max cluster elements: ";
-              for (const auto& elem : max_conflict_cluster_it->first) {
-                  std::cout << elem << " ";
-              }
-              std::cout << "\nconflict value: " << max_conflict_cluster_it->second << std::endl;
-              if(max_conflict_cluster_it->first.size() != num_robots)
-                moving_obstacles = true;
-              // iii. jointly optimiza the one with MAX conflicts
-              std::string tmp_envFile = "/tmp/dynoplan/tmp_envFile_" + gen_random(6) + ".yaml";
-              create_dir_if_necessary(tmp_envFile);
-              std::cout << "tmp envFile: " << tmp_envFile << std::endl;
-              get_moving_obstacle(inputFile, /*initGuess*/tmpNode.multirobot_trajectory, /*outputFile*/tmp_envFile, 
-                                max_conflict_cluster_it->first, /*moving_obs*/moving_obstacles, residual_force);
-              dynobench::Problem tmp_problem(tmp_envFile);
-              feasible = execute_optimizationMetaRobot(tmp_problem,
-                                      /*initialGuess*/discrete_search_sol, // can be discrete search
-                                      /*solution*/tmpNode.multirobot_trajectory, // update the solution
-                                      DYNOBENCH_BASE,
-                                      max_conflict_cluster_it->first,
-                                      sum_robot_cost,
-                                      residual_force);
-              if(feasible){
-                // iv. zero the optimized cluster's conflict, don't remove it
-                max_conflict_cluster_index = tmpNode.getIndexOfSet(max_conflict_cluster_it->first);
-                tmpNode.clusters.at(max_conflict_cluster_index).second = 0; 
-                // v. check for collision, update the collision_matrix
-                std::for_each(tmpNode.conflict_matrix.begin(), tmpNode.conflict_matrix.end(), [](std::vector<int>& row) {
-                    std::fill(row.begin(), row.end(), 0); });
-                if (!getConflicts(tmpNode.multirobot_trajectory.trajectories, robots, col_mng_robots, robot_objs, tmpNode.conflict_matrix)){
-                  std::cout << "No inter-robot conflict" << std::endl;
-                  // tmpNode.multirobot_trajectory.to_yaml_format(optimizationFile.c_str());
-                  auto optimization_end = std::chrono::steady_clock::now();
-                  std::chrono::duration<double> opt_duration = optimization_end - optimization_start;
-                  std::cout << "Time taken for optimization: " << opt_duration.count() << " seconds" << std::endl;
-                  if(!cluster_tracking.empty()){
-                    std::ofstream fout(optimizationFile, std::ios::app); 
-                    fout << "cluster_tracking:" << std::endl;
-                    for (auto &c: cluster_tracking){
-                      fout << "  - " << c << std::endl;
-                    }
-                  }
-                  bool joint_opt = true;
-                  return 0;
-                }
-                // vi. the max conflict happening in the output, extract this pair
-                auto [i, j, max_conflict] = tmpNode.getMaxElement(); // row, column, max conflict
-                index_i = tmpNode.containsX(i); // which element in clusters
-                index_j = tmpNode.containsX(j);
-                // none of them belong to any cluster
-                if(index_i < 0 && index_j < 0){
-                  tmpNode.clusters.push_back({{i, j}, tmp.conflict_matrix[i][j]}); 
-                }
-                // both belong to some cluster
-                else if(index_i >= 0 && index_j >= 0){
-                  tmpNode.clusters.at(index_i).first.insert(tmpNode.clusters.at(index_j).first.begin(), tmpNode.clusters.at(index_j).first.end());
-                  tmpNode.clusters.at(index_i).second = std::max(tmpNode.clusters.at(index_i).second, max_conflict);
-                  if(index_i != index_j)
-                    tmpNode.clusters.erase(tmpNode.clusters.begin() + index_j); // delete the old one
-                }
-                // only one belong to some cluster
-                else {
-                  if(index_i >= 0){
-                    tmpNode.clusters.at(index_i).first.insert(j);
-                    tmpNode.clusters.at(index_i).second = max_conflict;
-                  }
-                  else{
-                    tmpNode.clusters.at(index_j).first.insert(i);
-                    tmpNode.clusters.at(index_j).second = max_conflict;
-                  }
-                }
-              }
-            }
           }
         } // if no collision
         ++expands;
@@ -695,11 +550,11 @@ int main(int argc, char* argv[]) {
                 tmp_out_tdb, tmp_robot_id, upper_bounds[tmp_robot_id], hs[robot_id], rob_obj_set, /*reverse_search*/false, 
                 expanded_trajs_tmp, newNode.solution,
                 robots, col_mng_robots, robot_objs,
-                heuristics[tmp_robot_id], nullptr, residual_force, options_tdbastar.w, /*run_focal_heuristic*/true);
+                heuristics[tmp_robot_id], nullptr, problem.is_residual, options_tdbastar.w, /*run_focal_heuristic*/true);
           if (tmp_out_tdb.solved){
               newNode.cost += newNode.solution[tmp_robot_id].trajectory.cost;
               newNode.LB += newNode.solution[tmp_robot_id].trajectory.fmin;
-              newNode.focalHeuristic = highLevelfocalHeuristicState(newNode.solution, robots, problem.robotTypes, col_mng_robots, robot_objs, residual_force); 
+              newNode.focalHeuristic = highLevelfocalHeuristicState(newNode.solution, robots, problem.robotTypes, col_mng_robots, robot_objs, problem.is_residual); 
               std::cout << "New node solution cost:  " << newNode.solution[tmp_robot_id].trajectory.cost << std::endl;
               std::cout << "New node cost: " << newNode.cost << " New node LB: " << newNode.LB << std::endl;
               std::cout << "New node focal heuristic: " << newNode.focalHeuristic << std::endl;
