@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <random>
 #include <chrono>
 #include <iterator>
 #include <yaml-cpp/yaml.h>
@@ -448,6 +449,9 @@ bool getEarliestConflict(
                     pi.push_back(create_vector({robot_pos(0), robot_pos(1), robot_pos(2)}));
                     li.push_back(0.5); // TODO: this needs to be provided as an input
                 }
+                std::random_device rd;                     
+                std::default_random_engine eng(rd());      
+                std::shuffle(pi.begin(), pi.end(), eng);
                 cost_data data {pi, li, mu, lambda, p0_init_guess}; // prepare the data for the opt
                 optimizePayload(p0_opt, dim, p0_init_guess, data);
                 p0_init_guess << p0_opt(0), p0_opt(1), p0_opt(2);

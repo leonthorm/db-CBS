@@ -264,7 +264,7 @@ int main(int argc, char* argv[]) {
           std::cout << "Optimization succeeded!, optimization counter: "<< optimization_counter << std::endl;
           options_tdbastar.delta *= cfg["delta_rate"].as<float>();
           tol *= cfg["delta_rate"].as<float>();
-          // options_tdbastar.max_motions *= cfg["num_primitives_rate"].as<float>();
+          options_tdbastar.max_motions *= cfg["num_primitives_rate"].as<float>();
 
           for (auto& iter : robot_motions){
             for (size_t i = 0; i < problem.robotTypes.size(); ++i){
@@ -275,8 +275,8 @@ int main(int argc, char* argv[]) {
           }
 
         } else if (solved_db) {
-          options_tdbastar.delta *= cfg["delta_rate"].as<float>();
-          tol *= cfg["delta_rate"].as<float>();
+          // options_tdbastar.delta *= cfg["delta_rate"].as<float>();
+          // tol *= cfg["delta_rate"].as<float>();
           options_tdbastar.max_motions *= cfg["num_primitives_rate"].as<float>();
           for (auto& iter : robot_motions){
             for (size_t i = 0; i < problem.robotTypes.size(); ++i){
@@ -302,6 +302,8 @@ int main(int argc, char* argv[]) {
         std::cout << "*** options_tdbastar iteration: " << iteration << "***" << std::endl;
         options_tdbastar.print(std::cout);
         std::cout << "***" << std::endl;
+        discrete_start = std::chrono::steady_clock::now();
+
       }
       // disable/enable motions 
       for (auto& iter : sub_motions) {
