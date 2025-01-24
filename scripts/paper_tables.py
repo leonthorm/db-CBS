@@ -291,61 +291,61 @@ def write_table6(trials, timelimit):
 	# manually enter results for tro-18
 	result_d2 = result["drone2c"]
 	result_d2["tro-18"] = {
-		'success': 0.5,
-		't^st_median': None,
+		'success': 1.0,
+		't^st_median': 0.973,
 		'tr^st_median': None,
-		'J^st_median': None,
+		'J^st_median': 60.7,
 		'Jr^st_median': None,
-		'J^f_median': None,
+		'J^f_median': 60.7,
 		'Jr^f_median': None,
 	}
 	
 	# n = 4
 	result_d4 = result["drone4c"]
 	result_d4["tro-18"] = {
-		'success': 0.5,
-		't^st_median': None,
+		'success': 1.0,
+		't^st_median': 1.628,
 		'tr^st_median': None,
-		'J^st_median': None,
+		'J^st_median': 147.3,
 		'Jr^st_median': None,
-		'J^f_median': None,
+		'J^f_median': 147.3,
 		'Jr^f_median': None,
 	}
 	# n = 8
 	result_d8 = result["drone8c"]
 	result_d8["tro-18"] = {
-		'success': 0.5,
-		't^st_median': None,
+		'success': 1.0,
+		't^st_median': 3.17,
 		'tr^st_median': None,
-		'J^st_median': None,
+		'J^st_median': 297.11,
 		'Jr^st_median': None,
-		'J^f_median': None,
+		'J^f_median': 297.11,
 		'Jr^f_median': None,
 	}
 	# n = 10
 	result_d10 = result["drone10c"]
 	result_d10["tro-18"] = {
-		'success': 0.5,
-		't^st_median': None,
+		'success': 1.0,
+		't^st_median': 3.94,
 		'tr^st_median': None,
-		'J^st_median': None,
+		'J^st_median': 373,
 		'Jr^st_median': None,
-		'J^f_median': None,
+		'J^f_median': 373,
 		'Jr^f_median': None,
 	}
 	# n = 12
 	result_d12 = result["drone12c"]
 	result_d12["tro-18"] = {
-		'success': 0.5,
-		't^st_median': None,
+		'success': 1.0,
+		't^st_median': 4.88,
 		'tr^st_median': None,
-		'J^st_median': None,
+		'J^st_median': 439.8,
 		'Jr^st_median': None,
-		'J^f_median': None,
+		'J^f_median': 439.8,
 		'Jr^f_median': None,
 	}
 
-	result = benchmark_table.compute_results(instances, algs, Path("../results"), trials, timelimit, True)
+	# result = benchmark_table.compute_results(instances, algs, Path("../results"), trials, timelimit, True)
 	output_path = Path("../results/paper_table2.pdf")
 	with open(output_path.with_suffix(".tex"), "w") as f:
 
@@ -545,8 +545,8 @@ def write_table7(trials, timelimit):
 
 	benchmark_table.gen_pdf(output_path)
 if __name__ == '__main__':
-	trials = 1
-	timelimit = 5*60
+	trials = 3
+	timelimit = 45*60
 	# write_table1(trials, timelimit)
 	# write_table2(trials, timelimit)
 	# write_table3(trials, timelimit)
