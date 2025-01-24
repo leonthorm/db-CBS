@@ -293,7 +293,7 @@ def write_table6(trials, timelimit):
 	result_d2 = result["drone2c"]
 	result_d2["tro-18"] = {
 		'success': 1.0,
-		't^st_median': 0.973,
+		't^st_median': 0.983,
 		'tr^st_median': None,
 		'J^st_median': 60.7,
 		'Jr^st_median': None,
@@ -305,7 +305,7 @@ def write_table6(trials, timelimit):
 	result_d4 = result["drone4c"]
 	result_d4["tro-18"] = {
 		'success': 1.0,
-		't^st_median': 1.628,
+		't^st_median': 1.643,
 		'tr^st_median': None,
 		'J^st_median': 147.3,
 		'Jr^st_median': None,
@@ -316,7 +316,7 @@ def write_table6(trials, timelimit):
 	result_d8 = result["drone8c"]
 	result_d8["tro-18"] = {
 		'success': 1.0,
-		't^st_median': 3.17,
+		't^st_median': 3.187,
 		'tr^st_median': None,
 		'J^st_median': 297.11,
 		'Jr^st_median': None,
@@ -327,7 +327,7 @@ def write_table6(trials, timelimit):
 	result_d10 = result["drone10c"]
 	result_d10["tro-18"] = {
 		'success': 1.0,
-		't^st_median': 3.94,
+		't^st_median': 3.969,
 		'tr^st_median': None,
 		'J^st_median': 373,
 		'Jr^st_median': None,
@@ -338,7 +338,7 @@ def write_table6(trials, timelimit):
 	result_d12 = result["drone12c"]
 	result_d12["tro-18"] = {
 		'success': 1.0,
-		't^st_median': 4.88,
+		't^st_median': 4.894,
 		'tr^st_median': None,
 		'J^st_median': 439.8,
 		'Jr^st_median': None,

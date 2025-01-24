@@ -178,7 +178,7 @@ int main(int argc, char* argv[]) {
         } else if (robotType == "integrator2_3d_v0" || robotType == "integrator2_3d_large_v0"){
             motionsFile = "../new_format_motions/integrator2_3d_v0/long_50_1000/integrator2_3d_v0.bin.im.bin.sp.bin";
         } else if (robotType.find("_res_") != std::string::npos){
-            motionsFile = "../new_format_motions/integrator2_3d_v0/residual/long_50_500/integrator2_3d_v0.bin.im.bin.sp.bin";
+            motionsFile = "../new_format_motions/integrator2_3d_v0/residual/long_50_1000/integrator2_3d_v0.bin.im.bin.sp.bin";
         } else{
             throw std::runtime_error("Unknown motion filename for this robottype!");
         }

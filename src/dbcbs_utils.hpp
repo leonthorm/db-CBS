@@ -304,7 +304,6 @@ void createConstraintsFromConflicts(const Conflict& early_conflict, std::map<siz
     constraints[early_conflict.robot_idx_i].push_back({early_conflict.time, early_conflict.robot_state_i});
     constraints[early_conflict.robot_idx_j].push_back({early_conflict.time, early_conflict.robot_state_j});
 }
-// assumes if residual force, then add 0 to all robots, only homogeneous robots for now
 void export_solutions(const std::vector<LowLevelPlan<dynobench::Trajectory>>& solution, 
                       std::ofstream *out){
     float cost = 0;
