@@ -283,9 +283,9 @@ def write_table6(trials, timelimit):
 	]
 	# map to a shorter name for the table
 	alg_names = {
+		"tro-18": "MAPF/C+POST",
 		"db-ecbs-conservative": "db-ECBS-C",
 		"db-ecbs-residual": "db-ECBS-R",
-		"tro-18": "MAPF/C+POST",
 	}
 	result = benchmark_table.compute_results(instances, algs, Path("../results"), trials, timelimit, True)
 	# manually enter results for tro-18
@@ -345,7 +345,6 @@ def write_table6(trials, timelimit):
 		'Jr^f_median': None,
 	}
 
-	# result = benchmark_table.compute_results(instances, algs, Path("../results"), trials, timelimit, True)
 	output_path = Path("../results/paper_table2.pdf")
 	with open(output_path.with_suffix(".tex"), "w") as f:
 
