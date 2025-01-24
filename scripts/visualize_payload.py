@@ -418,7 +418,7 @@ def quad3dpayload_meshcatViewer():
         anim = Animation()
         for k, state in enumerate(states):
             with anim.at_frame(visualizer.vis, k) as frame:
-                visualizer.updateVis(state, frame=frame)
+                visualizer.updateVis(np.array(state, dtype=np.float64), frame=frame)
         visualizer.vis.set_animation(anim)
 
         res = visualizer.vis.static_html()
