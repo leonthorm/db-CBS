@@ -1,6 +1,6 @@
 import subprocess
 from pathlib import Path
-
+import yaml
 
 def gen_pdf(output_path):
     """Generate PDF from LaTeX."""
@@ -14,11 +14,11 @@ output_file = "final_table.tex"
 
 from jinja2 import Template
 
-# Environments data (reordered: Window, Wall, Forest)
+# Environments data
 environments = {
     "Window": ["Window 2", "Window 3", "Window 4", "Window 5", "Window 6"],
-    "Wall": ["Wall 2", "Wall 3", "Wall 4", "Wall 5", "Wall 6"],
     "Forest": ["Forest 2", "Forest 3", "Forest 4", "Forest 5", "Forest 6"],
+    "Wall": ["Wall 2", "Wall 3", "Wall 4", "Wall 5", "Wall 6"],
 }
 
 # Methods and robot types
@@ -41,23 +41,21 @@ def create_table(data, output_file):
 \setlength{\tabcolsep}{5pt}       % Further tighten column padding
 
 \begin{table*}[h!]
+\label{table1}
 \caption{Performance Metrics for Different Methods Across Environments, Robot Types, and Methods.}
 \centering
 \footnotesize
-\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|}
 \hline
 \multirow{3}{*}{\textbf{Environment}} 
 & \multicolumn{4}{c|}{\textbf{Success [\%]}} 
 & \multicolumn{4}{c|}{\textbf{Cost}} 
-& \multicolumn{4}{c|}{\textbf{Error}} 
 & \multicolumn{4}{c|}{\textbf{Time}} \\
-\cline{2-17}
-& \multicolumn{2}{c|}{\textbf{UR}} & \multicolumn{2}{c|}{\textbf{MP}} 
+\cline{2-13}
 & \multicolumn{2}{c|}{\textbf{UR}} & \multicolumn{2}{c|}{\textbf{MP}} 
 & \multicolumn{2}{c|}{\textbf{UR}} & \multicolumn{2}{c|}{\textbf{MP}} 
 & \multicolumn{2}{c|}{\textbf{UR}} & \multicolumn{2}{c|}{\textbf{MP}} \\
-\cline{2-17}
-& \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} & \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} 
+\cline{2-13}
 & \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} & \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} 
 & \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} & \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} 
 & \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} & \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} \\
@@ -65,7 +63,7 @@ def create_table(data, output_file):
 {% for group, envs in environments.items() %}
 {% for env in envs %}
 {{ env }}
-{% for metric in ['success', 'cost', 'error', 'time'] %}
+{% for metric in ['success', 'cost', 'time'] %}
 {% for robot in robot_types %}
 {% for method in methods %}
 & {% if robot in data.get(env, {}).get(method, {}) and metric in data[env][method][robot] %}
@@ -73,22 +71,54 @@ def create_table(data, output_file):
 {% if metric == 'success' %}
 {% set ours = data[env]["Ours"][robot][metric] %}
 {% set bl = data[env]["BL"][robot][metric] %}
-{% if method == 'Ours' and ours > bl %}
-\textbf{{ "{{" ~ ours ~ "}}" }}
-{% elif method == 'BL' and bl > ours %}
-\textbf{{ "{{" ~ bl ~ "}}" }}
+{% if ours is not none and bl is not none %}
+    {% if method == 'Ours' and ours > bl %}
+    \textbf{{ "{{" ~ ours ~ "}}" }}
+    {% elif method == 'BL' and bl > ours %}
+    \textbf{{ "{{" ~ bl ~ "}}" }}
+    {% else %}
+    {{ data[env][method][robot][metric] }}
+    {% endif %}
+{% elif ours is not none %}
+    {% if method == 'Ours' %}
+    \textbf{{ "{{" ~ ours ~ "}}" }}
+    {% else %}
+    -
+    {% endif %}
+{% elif bl is not none %}
+    {% if method == 'BL' %}
+    \textbf{{ "{{" ~ bl ~ "}}" }}
+    {% else %}
+    -
+    {% endif %}
 {% else %}
-{{ data[env][method][robot][metric] }}
+-
 {% endif %}
 {% else %}
-{% set ours = data[env]["Ours"][robot][metric][0] %}
-{% set bl = data[env]["BL"][robot][metric][0] %}
-{% if method == 'Ours' and ours > bl %}
-{\textbf{{ "{{" ~  "%.1f" | format(ours) ~ "}}" }}\hspace{0.5em}{\tiny \textcolor{gray}{{ "{%.1f}" | format(data[env]["Ours"][robot][metric][1]) }}}}
-{% elif method == 'BL' and bl > ours %}
-{\textbf{{ "{{" ~  "%.1f" | format(bl) ~ "}}" }}\hspace{0.5em}{\tiny \textcolor{gray}{{ "{%.1f}" | format(data[env]["BL"][robot][metric][1]) }}}}
+{% set ours = data[env]["Ours"][robot][metric][0] if data[env]["Ours"][robot][metric] is not none else None %}
+{% set bl = data[env]["BL"][robot][metric][0] if data[env]["BL"][robot][metric] is not none else None %}
+{% if ours is not none and bl is not none %}
+    {% if method == 'Ours' and ours < bl %}
+    {\textbf{{ "{{" ~ "%.1f" | format(ours) ~ "}}" }}\hspace{0.5em}{\tiny \textcolor{gray}{{ "{%.1f}" | format(data[env]["Ours"][robot][metric][1]) }}}}
+    {% elif method == 'BL' and bl < ours %}
+    {\textbf{{ "{{" ~ "%.1f" | format(bl) ~ "}}" }}\hspace{0.5em}{\tiny \textcolor{gray}{{ "{%.1f}" | format(data[env]["BL"][robot][metric][1]) }}}}
+    {% else %}
+    {{ "%.1f" | format(data[env][method][robot][metric][0]) }} {\tiny \textcolor{gray}{{ "{%.1f}" | format(data[env][method][robot][metric][1]) }}}
+    {% endif %}
+{% elif ours is not none %}
+    {% if method == 'Ours' %}
+    {\textbf{{ "{{" ~ "%.1f" | format(ours) ~ "}}" }}\hspace{0.5em}{\tiny \textcolor{gray}{{ "{%.1f}" | format(data[env]["Ours"][robot][metric][1]) }}}}
+    {% else %}
+    -
+    {% endif %}
+{% elif bl is not none %}
+    {% if method == 'BL' %}
+    {\textbf{{ "{{" ~ "%.1f" | format(bl) ~ "}}" }}\hspace{0.5em}{\tiny \textcolor{gray}{{ "{%.1f}" | format(data[env]["BL"][robot][metric][1]) }}}}
+    {% else %}
+    -
+    {% endif %}
 {% else %}
-{{ "%.1f" | format(data[env][method][robot][metric][0]) }} {\tiny \textcolor{gray}{{ "{%.1f}" | format(data[env][method][robot][metric][1]) }}}
+-
 {% endif %}
 {% endif %}
 {% else %} - {% endif %}
@@ -115,31 +145,11 @@ def create_table(data, output_file):
         f.write("\n".join([line.strip() for line in latex_table.splitlines() if line.strip()]))
 
 if __name__ == "__main__":
-    # Full data for all environments, methods, and robot types
-    data = {}
-    for env_group, env_list in environments.items():
-        for env in env_list:
-            data[env] = {
-                "Ours": {
-                    "UR": {
-                        "success": 100, "cost": (90.0, 0.5), "error": (15.0, 0.3), "time": (10.0, 0.2)
-                    },
-                    "MP": {
-                        "success": 100, "cost": (90.0, 0.6), "error": (14.0, 0.4), "time": (9.5, 0.3)
-                    },
-                },
-                "BL": {
-                    "UR": {
-                        "success": 99, "cost": (44.0, 0.6), "error": (16.0, 0.4), "time": (11.0, 0.3)
-                    },
-                    "MP": {
-                        "success": 99, "cost": (46.0, 0.7), "error": (15.0, 0.5), "time": (10.0, 0.4)
-                    },
-                },
-            }
 
-    # Call the create_table function
+
+    with open("../final_data.yaml", 'r') as f:
+        data = yaml.safe_load(f)
+
     create_table(data, output_file)
 
-    # Generate PDF
     gen_pdf(Path(output_file))

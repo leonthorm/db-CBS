@@ -18,13 +18,12 @@ from jinja2 import Template
 environments = {
     "Window": ["Window 2", "Window 3"],
     "Forest": ["Forest 2", "Forest 3"],
-    # "lego": ["lego 2", "lego 3"],
+    "lego": ["lego 2", "lego 3"],
 }
 
 # Methods and robot types
 methods = ["Ours", "BL"]  # Ours and Baseline (BL)
-# robot_types = ["UR", "MP"]  # UR: Unicycles with Rods, MP: Multirotors with Cables
-robot_types = ["MP"]  # UR: Unicycles with Rods, MP: Multirotors with Cables
+robot_types = ["UR", "MP"]  # UR: Unicycles with Rods, MP: Multirotors with Cables
 
 def create_table(data, output_file):
     """Generates a LaTeX table from the given data."""
@@ -45,16 +44,20 @@ def create_table(data, output_file):
 \caption{Performance Metrics for Different Methods Across Environments, Robot Types, and Methods.}
 \centering
 \footnotesize
-\begin{tabular}{|c|c|c|c|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|}
 \hline
-\multirow{2}{*}{\textbf{Environment}} 
-& \multicolumn{2}{c|}{\textbf{Energy} [Wh]} 
-& \multicolumn{2}{c|}{\textbf{Error } [m]} 
-& \multicolumn{2}{c|}{\textbf{Time} [s]} \\
-\cline{2-7}
-& \scriptsize \textbf{Ours} & \scriptsize \textbf{BL}# & \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} 
-& \scriptsize \textbf{Ours} & \scriptsize \textbf{BL}# & \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} 
-& \scriptsize \textbf{Ours} & \scriptsize \textbf{BL}# & \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} \\
+\multirow{3}{*}{\textbf{Environment}} 
+& \multicolumn{4}{c|}{\textbf{Energy} [Wh]} 
+& \multicolumn{4}{c|}{\textbf{Error } [m]} 
+& \multicolumn{4}{c|}{\textbf{Time} [s]} \\
+\cline{2-13}
+& \multicolumn{2}{c|}{\textbf{UR}} & \multicolumn{2}{c|}{\textbf{MP}} 
+& \multicolumn{2}{c|}{\textbf{UR}} & \multicolumn{2}{c|}{\textbf{MP}} 
+& \multicolumn{2}{c|}{\textbf{UR}} & \multicolumn{2}{c|}{\textbf{MP}} \\
+\cline{2-13}
+& \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} & \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} 
+& \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} & \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} 
+& \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} & \scriptsize \textbf{Ours} & \scriptsize \textbf{BL} \\
 \hline
 {% for group, envs in environments.items() %}
 {% for env in envs %}
