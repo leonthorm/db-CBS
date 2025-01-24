@@ -277,9 +277,10 @@ def write_table6(trials, timelimit):
 		"drone12c",
 	]
 	algs = [
+		"tro-18",
 		"db-ecbs-conservative",
 		"db-ecbs-residual",
-		"tro-18",
+		
 	]
 	# map to a shorter name for the table
 	alg_names = {
