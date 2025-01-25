@@ -1,5 +1,4 @@
 from pathlib import Path
-
 import benchmark_table
 from benchmark_table import write_table
 import os
@@ -265,8 +264,6 @@ def write_table5(trials, timelimit):
 
 	benchmark_table.gen_pdf(output_path)
 
-# for Ellipsoid vs. residual, when each run has been done separately,
-# and the final format has ellipsoid/instances, residual/instances
 def write_table6(trials, timelimit):
 	regret = False
 	instances = [
@@ -275,6 +272,7 @@ def write_table6(trials, timelimit):
 		"drone8c",
 		"drone10c",
 		"drone12c",
+		"drone16c",
 	]
 	algs = [
 		"tro-18",
@@ -301,7 +299,7 @@ def write_table6(trials, timelimit):
 		'Jr^f_median': None,
 	}
 	
-	# n = 4
+	n = 4
 	result_d4 = result["drone4c"]
 	result_d4["tro-18"] = {
 		'success': 1.0,
@@ -343,6 +341,17 @@ def write_table6(trials, timelimit):
 		'J^st_median': 439.8,
 		'Jr^st_median': None,
 		'J^f_median': 439.8,
+		'Jr^f_median': None,
+	}
+	# n = 16
+	result_d16 = result["drone16c"]
+	result_d16["tro-18"] = {
+		'success': 1.0,
+		't^st_median': 7.727,
+		'tr^st_median': None,
+		'J^st_median': 657.4,
+		'Jr^st_median': None,
+		'J^f_median': 657.4,
 		'Jr^f_median': None,
 	}
 
@@ -473,7 +482,7 @@ def write_table7(trials, timelimit):
 
 	result = benchmark_table.compute_results(instances, algs, Path("../results"), trials, timelimit, True)
 	
-	output_path = Path("../results/paper_table7.pdf")
+	output_path = Path("../results/paper_table1.pdf")
 	with open(output_path.with_suffix(".tex"), "w") as f:
 
 		f.write(r"\documentclass{standalone}")

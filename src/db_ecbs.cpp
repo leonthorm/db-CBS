@@ -176,9 +176,9 @@ int main(int argc, char* argv[]) {
         } else if (robotType == "integrator2_2d_v0"){
             motionsFile = "../new_format_motions/integrator2_2d_v0/integrator2_2d_v0.msgpack";
         } else if (robotType == "integrator2_3d_v0" || robotType == "integrator2_3d_large_v0"){
-            motionsFile = "../new_format_motions/integrator2_3d_v0/long_50_1000/integrator2_3d_v0.bin.im.bin.sp.bin";
+            motionsFile = "../new_format_motions/integrator2_3d_v0/long_50_5000/integrator2_3d_v0.bin.im.bin.sp.bin";
         } else if (robotType.find("_res_") != std::string::npos){
-            motionsFile = "../new_format_motions/integrator2_3d_v0/residual/long_50_1000/integrator2_3d_v0.bin.im.bin.sp.bin";
+            motionsFile = "../new_format_motions/integrator2_3d_v0/residual/long_50_5000/integrator2_3d_v0.bin.im.bin.sp.bin";
         } else{
             throw std::runtime_error("Unknown motion filename for this robottype!");
         }
@@ -289,13 +289,13 @@ int main(int argc, char* argv[]) {
     problem.goals = problem_original.goals;
     options_tdbastar.delta = cfg["delta_0"].as<float>();
     options_tdbastar.max_motions = cfg["num_primitives_0"].as<size_t>();
-    options_tdbastar.max_expands = 8000; // limit the low-level node expansion
+    // options_tdbastar.max_expands = 8000; // limit the low-level node expansion
     stats << "stats: " << "\n";
-    for (size_t iteration = 0; ; ++iteration) {
+    for (size_t iteration = 0; iteration < 10; ++iteration) {
       std::cout << "iteration: " << iteration << std::endl;
       if (iteration > 0) {
         if (solved_db) 
-          options_tdbastar.delta *= cfg["delta_0"].as<float>();
+          options_tdbastar.delta *= cfg["delta_rate"].as<float>();
         else 
           options_tdbastar.delta *= 0.99;
         // always add motions
@@ -305,6 +305,7 @@ int main(int argc, char* argv[]) {
           for (size_t i = 0; i < problem.robotTypes.size(); ++i){
             if (iter.first == problem.robotTypes[i]){
               motion_to_motion(robot_motions[problem.robotTypes[i]], sub_motions[problem.robotTypes[i]], *robots[i], options_tdbastar.max_motions);
+              break;
             }
           }
         }
@@ -319,6 +320,7 @@ int main(int argc, char* argv[]) {
           }
         }
       }
+      std::cout << "ITR: " << iteration << ", MOTIONS: " << options_tdbastar.max_motions << ", delta: " << options_tdbastar.delta << std::endl;
       solved_db = false;
       HighLevelNodeFocal start;
       start.solution.resize(env["robots"].size());
@@ -344,6 +346,7 @@ int main(int argc, char* argv[]) {
         if(!out_tdb.solved){
           std::cout << "Couldn't find initial solution for robot " << robot_id << "." << std::endl;
           start_node_valid = false;
+          solved_db = false;
           break;
         }
         start.cost += start.solution[robot_id].trajectory.cost;
@@ -489,6 +492,8 @@ int main(int argc, char* argv[]) {
                 stats << "    cost: " << cost_tmp << "\n";
                 stats << "    duration_tdbastar_eps: "  << duration_discrete.count() << "\n";
                 stats << "    duration_opt: " << duration_opt.count() << "\n";
+                stats << "    discrete cost: " << P.cost << "\n";
+
                 stats.flush(); 
                 // return 0;
                 if(check_anytime){
@@ -500,7 +505,7 @@ int main(int argc, char* argv[]) {
                 }
               }
               // extract motions from the solution
-              extract_motion_primitives(problem, optimization_sol, sub_motions, robots, /*length*/8);
+              extract_motion_primitives(problem, optimization_sol, sub_motions, robots, /*length*/4);
               itr_cost_data["runs"].push_back(YAML::Node());
               itr_cost_data["runs"][iteration]["iteration"] = iteration;
               itr_cost_data["runs"][iteration]["lowest_cost"] = lowest_cost;
@@ -514,7 +519,6 @@ int main(int argc, char* argv[]) {
                   std::cerr << "Error: Unable to open file for writing." << std::endl;
               }
             }
-            std::cout << "optimization failed" << std::endl;
             // return 0;
             break; // continue with the next iteration
           }

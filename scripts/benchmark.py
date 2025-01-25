@@ -199,10 +199,11 @@ def main():
 		"drone8c",
 		"drone10c",
 		"drone12c",
-		# "drone16c",
+		"drone16c",
 		# "drone24c",
 		# "drone28c",
 		# "drone32c",
+		# "swap3_drone",
 	]
 
 	# add random cases
@@ -220,8 +221,8 @@ def main():
 		"db-ecbs-residual",
 		"db-ecbs-conservative",
 	]
-	trials = 1 
-	timelimit = 45*60 
+	trials = 3 
+	timelimit = 40*60 
 
 	tasks = []
 	for instance in instances:
