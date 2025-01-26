@@ -38,12 +38,23 @@ def run_dbecbs(filename_env, folder, timelimit, cfg):
                     result = subprocess.run(cmd, timeout=timelimit, stdout=logfile, stderr=logfile)
             except subprocess.TimeoutExpired as e:
                 print(f"Command timed out after {timelimit} seconds.")
-                with open(filename_stats, 'r') as file:
-                    stats = yaml.safe_load(file)
-                    if not len(stats["stats"]):
-                        print("db-ecbs fail!")
-                    else: 
-                        print("db-ecbs succees!")
+                cmd_str = " ".join(str(arg) for arg in cmd)
+                subprocess.run(["pkill", "-f", " ".join(cmd_str)])
+
+                # Check if stats file exists and load stats
+                filename_stats = f"{folder}/stats.yaml"
+                try:
+                    with open(filename_stats, 'r') as file:
+                        stats = yaml.safe_load(file)
+                        if stats and "stats" in stats and len(stats["stats"]):
+                            print("db-ecbs succeeded!")
+                        else:
+                            print("db-ecbs failed!")
+                except FileNotFoundError:
+                    print(f"Stats file {filename_stats} not found.")
+
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
 
 
 
