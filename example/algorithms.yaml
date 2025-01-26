@@ -94,15 +94,15 @@ db-ecbs:
 
 db-ecbs-residual:
   default:
-    delta_0: 0.7
+    delta_0: 0.5
     delta_rate: 0.9
-    num_primitives_0: 100
+    num_primitives_0: 300
     num_primitives_rate: 1.5
     alpha: 0.5
     filter_duplicates: True
     heuristic1: "reverse-search"
     heuristic1_delta: 1.0
-    heuristic1_num_primitives_0: 400
+    heuristic1_num_primitives_0: 300
     suboptimality_factor: 2 # 1.3, 2, 3.3
     always_add_node: False
     rewire: True
@@ -117,15 +117,15 @@ db-ecbs-residual:
 
 db-ecbs-conservative:
   default:
-    delta_0: 0.7
+    delta_0: 0.5
     delta_rate: 0.9
-    num_primitives_0: 100
+    num_primitives_0: 300
     num_primitives_rate: 1.5
     alpha: 0.5
     filter_duplicates: True
     heuristic1: "reverse-search"
     heuristic1_delta: 1.0
-    heuristic1_num_primitives_0: 400
+    heuristic1_num_primitives_0: 300
     suboptimality_factor: 2 # 1.3, 2, 3.3
     always_add_node: False
     rewire: True

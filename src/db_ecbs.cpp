@@ -291,7 +291,7 @@ int main(int argc, char* argv[]) {
     options_tdbastar.max_motions = cfg["num_primitives_0"].as<size_t>();
     // options_tdbastar.max_expands = 8000; // limit the low-level node expansion
     stats << "stats: " << "\n";
-    for (size_t iteration = 0; iteration < 10; ++iteration) {
+    for (size_t iteration = 0; ; ++iteration) {
       std::cout << "iteration: " << iteration << std::endl;
       if (iteration > 0) {
         if (solved_db) 
@@ -455,6 +455,7 @@ int main(int argc, char* argv[]) {
           // read the discrete search as initial guess for clustered robots ONLY
           MultiRobotTrajectory discrete_search_sol;
           discrete_search_sol.read_from_yaml(outputFile.c_str());
+
           if(cfg["execute_joint_optimization"].as<bool>()){
             MultiRobotTrajectory optimization_sol;
             optimization_sol.read_from_yaml(outputFile.c_str()); // nxs needed
@@ -493,8 +494,10 @@ int main(int argc, char* argv[]) {
                 stats << "    duration_tdbastar_eps: "  << duration_discrete.count() << "\n";
                 stats << "    duration_opt: " << duration_opt.count() << "\n";
                 stats << "    discrete cost: " << P.cost << "\n";
-
                 stats.flush(); 
+                // take out the time search data
+                std::ofstream time_file(output_folder + "/time_search.yaml");
+                out_tdb.write_yaml(time_file); // only one robot
                 // return 0;
                 if(check_anytime){
                   std::string tmp_File1 = output_folder + "/discrete_" + std::to_string(iteration) + ".yaml";
