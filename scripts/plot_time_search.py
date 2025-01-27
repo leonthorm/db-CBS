@@ -13,22 +13,29 @@ def read_yaml(file_path):
         return {
             "time_collision_heuristic": data['data']['time_collision_heuristic'],
             "time_collisions": data['data']['time_collisions'],
-            "time_nearestNode": data['data']['time_nearestNode']
+            "time_nearestNode": data['data']['time_nearestNode'],
+            "time_rebuild_focal_set": data['data']['time_rebuild_focal_set'],
         }
     except KeyError as e:
         print(f"Error: Missing expected key {e} in the YAML data.")
         return None
 
-def plot_stacked_bar(data_iterations):
+def plot_stacked_bar(data_iterations, instances):
+    instance_names = {
+    "alcove_unicycle_sphere": "alcove",
+    "gen_p10_n8_4_hetero": "hetero-N8",
+    }
+
     # Data for plotting
     categories = {
-        'Collision Heuristic': 'time_collision_heuristic',
-        'Collisions': 'time_collisions',
-        'Nearest Node': 'time_nearestNode'
+        'Search-FH': 'time_collision_heuristic',
+        'Search-Update FS': 'time_rebuild_focal_set',
+        'Search-Collision': 'time_collisions',
+        'Search-NN': 'time_nearestNode'
     }
-    colors = ['skyblue', 'orange', 'green']
-    labels = [f'Iteration {i + 1}' for i in range(len(data_iterations))]
-    
+    colors = ['skyblue', 'orange', 'grey', 'red']
+    # labels = [f'Iteration {i + 1}' for i in range(len(data_iterations))] # to do: isntance name
+    labels = list(instance_names.values())
     # Initialize plot
     fig, ax = plt.subplots()
     width = 0.2  # Bar width
@@ -41,22 +48,25 @@ def plot_stacked_bar(data_iterations):
         ax.bar(x_positions, values, width, label=category, color=colors[category_index], bottom=bottoms)
     
     # Add legend, title, and labels
-    ax.set_title("Time Breakdown Across Iterations")
-    ax.set_ylabel("Time (seconds)")
+    # ax.set_title("Time Breakdown Across Iterations")
+    ax.set_ylabel("Time [s]")
     ax.set_xticks(x_positions)
     ax.set_xticklabels(labels)
-    ax.legend(title="Categories")
+    # ax.legend(loc='upper left',bbox_to_anchor=(1, 1))
+    ax.legend(loc='upper left')
     plt.tight_layout()
-    
+    plt.grid(True)
     # Show the plot
     plt.show()
 
 # File paths to your YAML files
-path = "/home/akmarak-laptop/IMRC/db-CBS/results/"
-instance = "drone2c"
+path = "/home/akmarak-laptop/IMRC/db-CBS/results/time/"
+instances = ["alcove_unicycle_sphere", "gen_p10_n8_4_hetero"] 
+# map to a shorter name for the plot
 algorithms = [
-    "db-ecbs-residual",
-    "db-ecbs-conservative"
+    # "db-ecbs-residual",
+    # "db-ecbs-conservative"
+    "db-ecbs",
 ]
 file_name = "time_search.yaml"
 # List to store the combined paths
@@ -64,7 +74,8 @@ file_paths = []
 
 # Generate paths by combining the base path, instance, and algorithm
 for algo in algorithms:
-    file_paths.append(path + instance + "/" + algo + "/000/" + file_name)
+    for instance in instances:
+        file_paths.append(path + instance + "/" + algo + "/000/" + file_name)
 
 # Read data from each YAML file
 data_iterations = []
@@ -72,7 +83,6 @@ for file_path in file_paths:
     data = read_yaml(file_path)
     if data:
         data_iterations.append(data)
-
 # Plot the data if both iterations were successfully read
 if len(data_iterations) == len(file_paths):
-    plot_stacked_bar(data_iterations)
+    plot_stacked_bar(data_iterations, instances)
