@@ -296,8 +296,6 @@ int main(int argc, char* argv[]) {
       if (iteration > 0) {
         if (solved_db) 
           options_tdbastar.delta *= cfg["delta_rate"].as<float>();
-        else 
-          options_tdbastar.delta *= 0.99;
         // always add motions
         options_tdbastar.max_motions *= cfg["num_primitives_rate"].as<float>();
         options_tdbastar.max_motions = std::min<size_t>(options_tdbastar.max_motions, 1e6);
@@ -484,7 +482,7 @@ int main(int argc, char* argv[]) {
                 cost_tmp += traj.cost;
               }
               for (size_t l = 0; l < num_robots; l++){
-                upper_bounds[l] = cost_tmp - (hs_total - hs[l]);
+                upper_bounds[l] = cost_tmp; // - (hs_total - hs[l]);
               }
               if (cost_tmp < lowest_cost) {
                 lowest_cost = cost_tmp;

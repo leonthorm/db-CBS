@@ -194,11 +194,11 @@ def main():
 
 		# 3D scenarios with octomap
 		# "drone1c",
-		"drone2c",
-		"drone4c",
-		"drone8c",
+		# "drone2c",
+		# "drone4c",
+		# "drone8c",
 		"drone10c",
-		"drone12c",
+		# "drone12c",
 		# "drone16c",
 		# "drone24c",
 		# "drone28c",
@@ -222,7 +222,7 @@ def main():
 		"db-ecbs-conservative",
 	]
 	trials = 2 
-	timelimit = 2*60*60 
+	timelimit = 60*60 
 
 	tasks = []
 	for instance in instances:
