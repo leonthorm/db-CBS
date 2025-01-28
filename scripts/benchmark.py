@@ -194,12 +194,12 @@ def main():
 
 		# 3D scenarios with octomap
 		# "drone1c",
-		"drone2c",
-		"drone4c",
-		"drone8c",
-		"drone10c",
-		"drone12c",
-		"drone16c",
+		# "drone2c",
+		# "drone4c",
+		# "drone8c",
+		# "drone10c",
+		# "drone12c",
+		# "drone16c",
 		# "drone24c",
 		# "drone28c",
 		# "drone32c",
@@ -213,16 +213,16 @@ def main():
 				# instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
 
 	algs = [
-		# "sst",
-		# "s2m2",
-		# "k-cbs",
-		# "db-cbs",
-		# "db-ecbs",
-		"db-ecbs-residual",
-		"db-ecbs-conservative",
+		"sst",
+		"s2m2",
+		"k-cbs",
+		"db-cbs",
+		"db-ecbs",
+		# "db-ecbs-residual",
+		# "db-ecbs-conservative",
 	]
-	trials = 2 
-	timelimit = 2.5*60*60 
+	trials = 5 
+	timelimit = 5*60 
 
 	tasks = []
 	for instance in instances:
@@ -242,7 +242,7 @@ def main():
 	
 	run_benchmark_stats(instances, algs, trials, timelimit)
 	write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit)
-# 
+ 
 	# subprocess.run(
 		# ['pdftk',
 		#  Path("../results") / 'table.pdf',
@@ -255,12 +255,8 @@ def main():
 	# (Path("../results") / 'table.pdf').unlink()
 	# (Path("../results") / 'stats.pdf').unlink()
 
-	# paper_tables.write_table1(trials, timelimit)
-	# paper_tables.write_table2(trials, timelimit)
-	# paper_tables.write_table3(trials, timelimit)
-	# paper_tables.write_table4(trials, timelimit)
-	# paper_tables.write_table5(trials, timelimit)
-	paper_tables.write_table6(trials, timelimit)
+	# paper_tables.write_table6(trials, timelimit)
+	paper_tables.write_table7(trials, timelimit) # 2D case
 
 if __name__ == '__main__':
 	main()

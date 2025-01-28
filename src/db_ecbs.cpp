@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
     duration duration_discrete, duration_opt;
 
     YAML::Node cfg = YAML::LoadFile(cfgFile);
-    // cfg = cfg["db-ecbs"]["default"];
+    cfg = cfg["db-ecbs"]["default"];
     float alpha = cfg["alpha"].as<float>();
     bool filter_duplicates = cfg["filter_duplicates"].as<bool>();
     fs::path output_path(outputFile);
@@ -487,6 +487,7 @@ int main(int argc, char* argv[]) {
               if (cost_tmp < lowest_cost) {
                 lowest_cost = cost_tmp;
                 optimization_sol.to_yaml_format(optimizationFile.c_str());
+                std::cout << "Optimization better solution is saved!" << std::endl;
                 stats << "  - t: " << t.count() << "\n";
                 stats << "    cost: " << cost_tmp << "\n";
                 stats << "    duration_tdbastar_eps: "  << duration_discrete.count() << "\n";
@@ -494,9 +495,18 @@ int main(int argc, char* argv[]) {
                 stats << "    discrete cost: " << P.cost << "\n";
                 stats.flush(); 
                 // take out the time search data
-                std::ofstream time_file(output_folder + "/time_search.yaml");
-                out_tdb.write_yaml(time_file); // only one robot
-                // return 0;
+                std::string time_stats = output_folder + "/time_search.yaml";
+                if (std::filesystem::exists(time_stats)) {
+                  std::cout << "time stats file already exists. Not creating it." << std::endl;
+                } else {
+                  std::ofstream ofs(time_stats); // Create the file if it doesn't exist
+                  if (ofs) {
+                      out_tdb.write_yaml(ofs); // only one robot
+                  } else {
+                      std::cerr << "Failed to create the time stats file." << std::endl;
+                  }
+                } 
+                return 0;
                 if(check_anytime){
                   std::string tmp_File1 = output_folder + "/discrete_" + std::to_string(iteration) + ".yaml";
                   discrete_search_sol.to_yaml_format(tmp_File1.c_str());
