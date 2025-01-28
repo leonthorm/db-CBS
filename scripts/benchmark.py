@@ -150,7 +150,7 @@ def main():
 		# "swap1_double_integrator",
 		# 2 robot cases
 		# "swap2_unicycle",
-		# "swap2_unicycle_sphere",
+		"swap2_unicycle_sphere",
 		# "swap2_unicycle_kink",
 		# "swap2_double_integrator",
 		# "swap2_trailer",
@@ -159,9 +159,9 @@ def main():
 		# "makespan_vs_soc_1",
 		# "makespan_vs_soc_0",
 		# "alcove_unicycle",
-		# "alcove_unicycle_sphere",
+		"alcove_unicycle_sphere",
 		# "at_goal_unicycle",
-		# "at_goal_unicycle_sphere",
+		"at_goal_unicycle_sphere",
 		# 3 robot cases
 		# "swap3_unicycle",
 		# "swap3_unicycle_sphere",
@@ -207,10 +207,10 @@ def main():
 	]
 
 	# add random cases
-	# for kind in ["unicycle_sphere", "hetero"]: 
-		# for n in [2,4,8]:
-			# for k in range(10):
-				# instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
+	for kind in ["unicycle_sphere", "hetero"]: 
+		for n in [2,4,8]:
+			for k in range(10):
+				instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
 
 	algs = [
 		"sst",
