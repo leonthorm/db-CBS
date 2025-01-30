@@ -222,7 +222,7 @@ def main():
 		# "db-ecbs-residual",
 		# "db-ecbs-conservative",
 	]
-	trials = 5 
+	trials = 10 
 	timelimit = 5*60 
 
 	tasks = []
