@@ -257,20 +257,20 @@ target_include_directories(main_ompl PUBLIC
 )
 
  # for cbs optimization
- add_executable(main_multirobot_cbs_optimization
-  src/main_multirobot_cbs_optimization.cpp
-)
+#  add_executable(main_multirobot_cbs_optimization
+#   src/main_multirobot_cbs_optimization.cpp
+# )
 
-target_include_directories(main_multirobot_cbs_optimization PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/include
-)
+# target_include_directories(main_multirobot_cbs_optimization PRIVATE
+#   ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/include
+# )
 
-target_link_libraries(main_multirobot_cbs_optimization PRIVATE 
-  idbastar::optimization
-  idbastar::tdbastar_epsilon
-  motion_planning_common
-  ${Boost_LIBRARIES}
-  ${YAML_LIBRARIES}
-  ompl
-  ${FCL_LIBRARIES}
-)
+# target_link_libraries(main_multirobot_cbs_optimization PRIVATE 
+#   idbastar::optimization
+#   idbastar::tdbastar_epsilon
+#   motion_planning_common
+#   ${Boost_LIBRARIES}
+#   ${YAML_LIBRARIES}
+#   ompl
+#   ${FCL_LIBRARIES}
+# )
