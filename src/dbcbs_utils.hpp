@@ -290,10 +290,10 @@ bool getEarliestViolations(
       if (rho < -max_f || rho > max_f){ 
         std::cout << "fa violations" << std::endl;
         for(auto& k : involved_robots){ // create constraints for each involved neighbor
-          constraints[k].push_back({t, states.at(k)});
+          constraints[k].push_back({t*0.1, states.at(k)});
         }
         // add the self robot
-        constraints[i].push_back({t, states.at(i)});
+        constraints[i].push_back({t*0.1, states.at(i)});
         return true; // as soon as the violation happends
       }
     }

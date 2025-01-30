@@ -99,7 +99,6 @@ int main(int argc, char* argv[]) {
     bool feasible = false;
     // tdbstar options
     Options_tdbastar options_tdbastar;
-    options_tdbastar.outFile = outputFile;
     options_tdbastar.search_timelimit = timeLimit;
     options_tdbastar.cost_delta_factor = 0;
     options_tdbastar.fix_seed = 1;
@@ -441,7 +440,6 @@ int main(int argc, char* argv[]) {
         std::map<size_t, std::vector<Constraint>> constraints;
         if (!getEarliestConflict(P.solution, robots, col_mng_robots, robot_objs, inter_robot_conflict)
           && (!problem.is_residual || !getEarliestViolations(P.solution, problem.robotTypes, constraints))){
-          solved_db = true;
           std::cout << "Final solution from db-ecbs!" << std::endl; 
           create_dir_if_necessary(outputFile);
           std::ofstream out_db(outputFile);
@@ -450,25 +448,20 @@ int main(int argc, char* argv[]) {
           duration_discrete = discrete_end - discrete_start;
           std::cout << "Time taken for discrete search: " << duration_discrete.count() << " seconds" << std::endl;
           // return 0;
-          // read the discrete search as initial guess for clustered robots ONLY
+          // read the discrete search as initial guess
           MultiRobotTrajectory discrete_search_sol;
           discrete_search_sol.read_from_yaml(outputFile.c_str());
 
           if(cfg["execute_joint_optimization"].as<bool>()){
             MultiRobotTrajectory optimization_sol;
-            optimization_sol.read_from_yaml(outputFile.c_str()); // nxs needed
-            std::unordered_set<size_t> cluster;
-            for (size_t i = 0; i < num_robots; ++i) {
-                cluster.insert(i);
-            }
             auto start = std::chrono::steady_clock::now();
             feasible = execute_optimizationMetaRobot(problem, // inputFile
                                       /*initialGuess*/discrete_search_sol, 
                                       /*solution*/optimization_sol,
                                       DYNOBENCH_BASE,
-                                      cluster,
                                       sum_robot_cost);
             if(feasible){
+              solved_db = true;
               std::cout << "Joint optimization is done" << std::endl;
               auto end = std::chrono::steady_clock::now();
               duration_opt = end - start;
@@ -494,6 +487,7 @@ int main(int argc, char* argv[]) {
                 stats << "    duration_opt: " << duration_opt.count() << "\n";
                 stats << "    discrete cost: " << P.cost << "\n";
                 stats.flush(); 
+                return 0;
                 // take out the time search data
                 std::string time_stats = output_folder + "/time_search.yaml";
                 if (std::filesystem::exists(time_stats)) {
@@ -506,7 +500,6 @@ int main(int argc, char* argv[]) {
                       std::cerr << "Failed to create the time stats file." << std::endl;
                   }
                 } 
-                return 0;
                 if(check_anytime){
                   std::string tmp_File1 = output_folder + "/discrete_" + std::to_string(iteration) + ".yaml";
                   discrete_search_sol.to_yaml_format(tmp_File1.c_str());
@@ -516,7 +509,7 @@ int main(int argc, char* argv[]) {
                 }
               }
               // extract motions from the solution
-              extract_motion_primitives(problem, optimization_sol, sub_motions, robots, /*length*/4);
+              extract_motion_primitives(problem, optimization_sol, sub_motions, robots, /*length*/0);
               itr_cost_data["runs"].push_back(YAML::Node());
               itr_cost_data["runs"][iteration]["iteration"] = iteration;
               itr_cost_data["runs"][iteration]["lowest_cost"] = lowest_cost;

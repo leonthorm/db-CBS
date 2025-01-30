@@ -204,8 +204,9 @@ def main():
 		# "drone28c",
 		# "drone32c",
 		# "swap3_drone",
+		# "wall_drone8c",
 	]
-
+# 
 	# add random cases
 	for kind in ["unicycle_sphere", "hetero"]: 
 		for n in [2,4,8]:
