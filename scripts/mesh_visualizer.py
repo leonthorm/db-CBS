@@ -36,12 +36,48 @@ def visualize(env_file, result_file, filename_video=None):
       obs_type = obs["type"]
       if (obs_type == 'octomap'):
          octomap_stl = obs["octomap_stl"]
-         vis[f"Obstacle{k}"].set_object(g.StlMeshGeometry.from_file(octomap_stl), g.MeshLambertMaterial(opacity=0.4, color=0xFFFFFF)) 
+         vis[f"Obstacle{k}"].set_object(g.StlMeshGeometry.from_file(octomap_stl), g.MeshLambertMaterial(opacity=0.8, color=0xFFFFFF)) 
       elif (obs_type == 'box'):
         vis[f"Obstacle{k}"].set_object(g.Mesh(g.Box(size)))
         vis[f"Obstacle{k}"].set_transform(tf.translation_matrix(center))
       else:
          print("Unknown Obstacle type!")
+
+    add_walls = True
+    if(add_walls):
+        # Define boundaries, my 3D problem
+      min_bounds = np.array([-5.5, -3, 0])
+      max_bounds = np.array([2, 3.5, 2.5])
+
+      size = max_bounds - min_bounds
+      floor_size = [size[0], size[1], 0.1]  # Thin floor
+      wall_thickness = 0.1  # Thin walls
+
+      # Add floor
+      vis["floor"].set_object(g.Box(floor_size), g.MeshLambertMaterial(color=0x888888))
+      vis["floor"].set_transform(
+          meshcat.transformations.translation_matrix([(min_bounds[0] + max_bounds[0]) / 2,
+                                                      (min_bounds[1] + max_bounds[1]) / 2,
+                                                      min_bounds[2] - 0.05])  # Slightly below min z
+      )
+
+      # Add first wall (along x-axis)
+      wall_x_size = [wall_thickness, size[1], size[2]]
+      vis["wall_x"].set_object(g.Box(wall_x_size), g.MeshLambertMaterial(opacity=0.6, color=0xC0C0C0))
+      vis["wall_x"].set_transform(
+          meshcat.transformations.translation_matrix([min_bounds[0] - wall_thickness / 2,
+                                                      (min_bounds[1] + max_bounds[1]) / 2,
+                                                      min_bounds[2] + size[2] / 2])
+      )
+
+      # Add second wall (along y-axis)
+      wall_y_size = [size[0], wall_thickness, size[2]]
+      vis["wall_y"].set_object(g.Box(wall_y_size), g.MeshLambertMaterial(opacity=0.6, color=0xC0C0C0))
+      vis["wall_y"].set_transform(
+          meshcat.transformations.translation_matrix([(min_bounds[0] + max_bounds[0]) / 2,
+                                                max_bounds[1] + wall_thickness / 2,
+                                                min_bounds[2] + size[2] / 2])
+      )
 
     with open(result_file) as res_file:
         result = yaml.load(res_file, Loader=yaml.FullLoader)
@@ -68,6 +104,16 @@ def visualize(env_file, result_file, filename_video=None):
     states = []
     name_robot = 0
     max_k = 0
+    # start, goal states
+    robots = data["robots"]
+    for r in range (len(robots)):
+      start = robots[r]["start"][:3]
+      goal = robots[r]["goal"][:3]
+      vis["sphere" + str(r*2)].set_object(g.Mesh(g.Sphere(0.03), g.MeshLambertMaterial(opacity=0.4,color=0xFF0000))) 
+      vis["sphere" + str(r*2)].set_transform(tf.translation_matrix(start))
+      vis["box" + str(r*2 + 1)].set_object(g.Box([0.05, 0.05, 0.05]), g.MeshLambertMaterial(opacity=0.4, color=00000000))
+      vis["box" + str(r*2 + 1)].set_transform(tf.translation_matrix(goal))
+
     for i in range(len(result["result"])):
         state = []
         position = [] 
@@ -83,7 +129,6 @@ def visualize(env_file, result_file, filename_video=None):
           vis["Quadrotor" + str(name_robot)].set_object(g.StlMeshGeometry.from_file('../meshes/cf2_assembly.stl'), g.MeshLambertMaterial(color=0x0000FF)) # blue
         vis["trajectory" + str(name_robot)].set_object(g.Line(g.PointsGeometry(position), g.LineBasicMaterial(color=0x00FF00))) # green
         name_robot+=1
-    # max_k = len(max(states))
     for k in range(max_k):
       for l in range(len(states)): # for each robot
         with anim.at_frame(vis, 10*k) as frame:

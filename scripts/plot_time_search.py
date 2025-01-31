@@ -1,14 +1,13 @@
 import yaml
 import matplotlib.pyplot as plt
-
-import yaml
-import matplotlib.pyplot as plt
+import os
 
 def read_yaml(file_path):
     # Read and parse the YAML file
     with open(file_path, 'r') as file:
         data = yaml.safe_load(file)
-    
+    # time_nearestMotion 
+    # time_hfun 
     try:
         return {
             "time_collision_heuristic": data['data']['time_collision_heuristic'],
@@ -23,7 +22,17 @@ def read_yaml(file_path):
 def plot_stacked_bar(data_iterations, instances):
     instance_names = {
     "alcove_unicycle_sphere": "alcove",
-    "gen_p10_n8_4_hetero": "hetero-N8",
+    "gen_p10_n8_4_hetero": "hetero8",
+    "drone4-C": "drone4-C",
+    "drone4-R": "drone4-R",
+    # "drone8-C": "drone8-C",
+    # "drone8-R": "drone8-R",
+    # "drone12-C": "drone12-C",
+    # "drone12-R": "drone12-R",
+     "wall8-C": "wall8-C",
+     "wall8-R": "wall8-R",
+
+
     }
 
     # Data for plotting
@@ -38,9 +47,8 @@ def plot_stacked_bar(data_iterations, instances):
     labels = list(instance_names.values())
     # Initialize plot
     fig, ax = plt.subplots()
-    width = 0.2  # Bar width
+    width = 0.4  # Bar width
     x_positions = range(len(data_iterations))  # Positions for each bar
-    
     # Create stacked bars for each iteration
     for category_index, (category, key) in enumerate(categories.items()):
         bottoms = [sum(data[categories[c]] for c in list(categories.keys())[:category_index]) for data in data_iterations]
@@ -60,9 +68,9 @@ def plot_stacked_bar(data_iterations, instances):
     plt.show()
 
 # File paths to your YAML files
-path = "/home/akmarak-laptop/IMRC/db-CBS/results/time/"
-instances = ["alcove_unicycle_sphere", "gen_p10_n8_4_hetero"] 
-# map to a shorter name for the plot
+path = "/home/akmarak-laptop/IMRC/db-CBS/results/tro-plots/time/"
+instances = ["alcove_unicycle_sphere", "gen_p10_n8_4_hetero", "drone4-C", "drone4-R","wall8-C", "wall8-R" ] 
+
 algorithms = [
     # "db-ecbs-residual",
     # "db-ecbs-conservative"
@@ -76,13 +84,13 @@ file_paths = []
 for algo in algorithms:
     for instance in instances:
         file_paths.append(path + instance + "/" + algo + "/000/" + file_name)
-
 # Read data from each YAML file
 data_iterations = []
 for file_path in file_paths:
-    data = read_yaml(file_path)
-    if data:
-        data_iterations.append(data)
+    if os.path.exists(file_path):
+        data = read_yaml(file_path)
+        if data:
+            data_iterations.append(data)
 # Plot the data if both iterations were successfully read
-if len(data_iterations) == len(file_paths):
-    plot_stacked_bar(data_iterations, instances)
+# if len(data_iterations) == len(file_paths):
+plot_stacked_bar(data_iterations, instances)

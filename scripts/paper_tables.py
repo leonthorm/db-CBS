@@ -553,16 +553,31 @@ def write_table7(trials, timelimit):
 		f.write(r"\end{document}")
 
 	benchmark_table.gen_pdf(output_path)
+
+# wall example for residual vs. conservative case
+def write_table8(trials, timelimit):
+	instances = [
+		"wall_drone8c",
+	]
+	algs = [
+		"db-ecbs-residual",
+		"db-ecbs-conservative",
+	]
+
+	write_table(instances, algs, Path("../results/"), "paper_table3.pdf", trials, timelimit)
+
 if __name__ == '__main__':
-	trials = 3
-	timelimit = 45*60
+	trials = 5
+	timelimit = 10*60
 	# write_table1(trials, timelimit)
 	# write_table2(trials, timelimit)
 	# write_table3(trials, timelimit)
 	# write_table4(trials, timelimit)
 	# write_table5(trials, timelimit)
-	write_table6(trials, timelimit)
+	# write_table6(trials, timelimit)
 	# write_table7(trials, timelimit)
+	write_table8(trials, timelimit)
+
 
 
 
