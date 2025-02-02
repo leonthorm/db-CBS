@@ -1,7 +1,8 @@
 import yaml
 import matplotlib.pyplot as plt
 import os
-
+import numpy as np
+# I - for the computation time plot
 def read_yaml(file_path):
     # Read and parse the YAML file
     with open(file_path, 'r') as file:
@@ -56,11 +57,11 @@ def plot_stacked_bar(data_iterations, instances):
         ax.bar(x_positions, values, width, label=category, color=colors[category_index], bottom=bottoms)
     
     # Add legend, title, and labels
-    # ax.set_title("Time Breakdown Across Iterations")
+    ax.grid(which='both', axis='x', linestyle='dashed')
+    ax.grid(which='major', axis='y', linestyle='dashed')
     ax.set_ylabel("Time [s]")
     ax.set_xticks(x_positions)
     ax.set_xticklabels(labels)
-    # ax.legend(loc='upper left',bbox_to_anchor=(1, 1))
     ax.legend(loc='upper left')
     plt.tight_layout()
     plt.grid(True)
@@ -91,6 +92,65 @@ for file_path in file_paths:
         data = read_yaml(file_path)
         if data:
             data_iterations.append(data)
-# Plot the data if both iterations were successfully read
-# if len(data_iterations) == len(file_paths):
-plot_stacked_bar(data_iterations, instances)
+
+# plot_stacked_bar(data_iterations, instances)
+
+def add_cost_and_time_over_robots_plot(a, i):
+    folder = "/home/akmarak-laptop/IMRC/db-CBS/results/add_node/"
+    t_values = {key: [] for key in a}  # Store t values for a1 and a2
+    cost_values = {key: [] for key in a}  # Store t values for a1 and a2
+    colors = ['red', 'blue']
+    labels = ['Always Add', 'Rewire']
+    x = np.array([1, 2, 3, 4]) 
+    for a_instance in a:
+        for i_instance in i:
+            yaml_file = folder + a_instance + "/" + i_instance + "/db-ecbs/000/stats.yaml" 
+            try:
+                with open(yaml_file, 'r') as file:
+                    data = yaml.safe_load(file)
+                    stats = data["stats"]
+                    if 'd_t' in data["stats"][0]:
+                        t_values[a_instance].append(data["stats"][0]['d_t']) # always the only one stat
+                        cost_values[a_instance].append(data["stats"][0]['d_cost']) # always the only one stat
+                    else:
+                        print(f"Warning: 't, cost' not found in {yaml_file}")
+            except FileNotFoundError:
+                print(f"Error: {yaml_file} not found")
+                t_values[a_instance].append(None)  # Keep structure for plotting
+                cost_values[a_instance].append(None)  # Keep structure for plotting
+    fig, ax = plt.subplots(2, 1, sharex='all', sharey='none')
+    for i in range(2):
+    #   ax[i].set_xscale('log')
+      ax[i].grid(which='both', axis='x', linestyle='dashed')
+      ax[i].grid(which='major', axis='y', linestyle='dashed')
+
+    parameters = {'p': cost_values, 't': t_values}
+    for idx, (param, values) in enumerate(parameters.items()):
+        for i in range(2):  # Two lines for each parameter
+            ax[idx].plot(x, values[a[i]], color=colors[i], linewidth=3, alpha=0.8, label=labels[i])
+
+    ax[0].legend()
+    ax[0].set_ylabel(r"Cost [s]")
+    ax[1].set_ylabel("Time [s]")
+    ax[-1].set_xticks(x)
+    i2 = [
+        "drone2",
+        "drone4",
+        "drone8",
+        "drone10",
+    ]
+    ax[-1].set_xticklabels(i2)
+    plt.show()
+
+def main():
+    a = ["always_add", "rewire"]
+    i = [
+        "drone2c",
+        "drone4c",
+        "drone8c",
+        "drone10c",
+    ]
+    add_cost_and_time_over_robots_plot(a, i)
+    
+if __name__ == "__main__":
+  main()

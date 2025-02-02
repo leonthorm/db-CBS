@@ -28,7 +28,6 @@ def visualize(env_file, result_file, filename_video=None):
 
     with open(env_file) as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
-        
     obstacles = data["environment"]["obstacles"]
     for k, obs in enumerate(obstacles):
       center = obs["center"]
@@ -46,8 +45,11 @@ def visualize(env_file, result_file, filename_video=None):
     add_walls = True
     if(add_walls):
         # Define boundaries, my 3D problem
-      min_bounds = np.array([-5.5, -3, 0])
-      max_bounds = np.array([2, 3.5, 2.5])
+      min_dim = data["environment"]["min"]
+      max_dim = data["environment"]["max"]
+
+      min_bounds = np.array([min_dim[0], min_dim[1], min_dim[2]])
+      max_bounds = np.array([max_dim[0], max_dim[1], max_dim[2]])
 
       size = max_bounds - min_bounds
       floor_size = [size[0], size[1], 0.1]  # Thin floor
@@ -62,13 +64,13 @@ def visualize(env_file, result_file, filename_video=None):
       )
 
       # Add first wall (along x-axis)
-      wall_x_size = [wall_thickness, size[1], size[2]]
-      vis["wall_x"].set_object(g.Box(wall_x_size), g.MeshLambertMaterial(opacity=0.6, color=0xC0C0C0))
-      vis["wall_x"].set_transform(
-          meshcat.transformations.translation_matrix([min_bounds[0] - wall_thickness / 2,
-                                                      (min_bounds[1] + max_bounds[1]) / 2,
-                                                      min_bounds[2] + size[2] / 2])
-      )
+      # wall_x_size = [wall_thickness, size[1], size[2]]
+      # vis["wall_x"].set_object(g.Box(wall_x_size), g.MeshLambertMaterial(opacity=0.6, color=0xC0C0C0))
+      # vis["wall_x"].set_transform(
+      #     meshcat.transformations.translation_matrix([min_bounds[0] - wall_thickness / 2,
+      #                                                 (min_bounds[1] + max_bounds[1]) / 2,
+      #                                                 min_bounds[2] + size[2] / 2])
+      # )
 
       # Add second wall (along y-axis)
       wall_y_size = [size[0], wall_thickness, size[2]]
@@ -77,6 +79,15 @@ def visualize(env_file, result_file, filename_video=None):
           meshcat.transformations.translation_matrix([(min_bounds[0] + max_bounds[0]) / 2,
                                                 max_bounds[1] + wall_thickness / 2,
                                                 min_bounds[2] + size[2] / 2])
+      )
+
+     # Add second wall (along x-axis)
+      wall_x_size = [wall_thickness, size[1], size[2]]
+      vis["wall_x"].set_object(g.Box(wall_x_size), g.MeshLambertMaterial(opacity=0.6, color=0xC0C0C0))
+      vis["wall_x"].set_transform(
+          meshcat.transformations.translation_matrix([max_bounds[0] - wall_thickness / 2,
+                                                      (min_bounds[1] + max_bounds[1]) / 2,
+                                                      min_bounds[2] + size[2] / 2])
       )
 
     with open(result_file) as res_file:
@@ -105,14 +116,16 @@ def visualize(env_file, result_file, filename_video=None):
     name_robot = 0
     max_k = 0
     # start, goal states
-    robots = data["robots"]
-    for r in range (len(robots)):
-      start = robots[r]["start"][:3]
-      goal = robots[r]["goal"][:3]
-      vis["sphere" + str(r*2)].set_object(g.Mesh(g.Sphere(0.03), g.MeshLambertMaterial(opacity=0.4,color=0xFF0000))) 
-      vis["sphere" + str(r*2)].set_transform(tf.translation_matrix(start))
-      vis["box" + str(r*2 + 1)].set_object(g.Box([0.05, 0.05, 0.05]), g.MeshLambertMaterial(opacity=0.4, color=00000000))
-      vis["box" + str(r*2 + 1)].set_transform(tf.translation_matrix(goal))
+    start_goal = True
+    if(start_goal):
+      robots = data["robots"]
+      for r in range (len(robots)):
+        start = robots[r]["start"][:3]
+        goal = robots[r]["goal"][:3]
+        vis["sphere" + str(r*2)].set_object(g.Mesh(g.Sphere(0.03), g.MeshLambertMaterial(opacity=0.4,color=0xFF0000))) 
+        vis["sphere" + str(r*2)].set_transform(tf.translation_matrix(start))
+        vis["box" + str(r*2 + 1)].set_object(g.Box([0.05, 0.05, 0.05]), g.MeshLambertMaterial(opacity=0.4, color=00000000))
+        vis["box" + str(r*2 + 1)].set_transform(tf.translation_matrix(goal))
 
     for i in range(len(result["result"])):
         state = []

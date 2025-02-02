@@ -168,6 +168,8 @@ int main(int argc, char* argv[]) {
         robots.push_back(robot);
         if (robotType == "unicycle1_v0" || robotType == "unicycle1_sphere_v0"){
             motionsFile = "../new_format_motions/unicycle1_v0/unicycle1_v0.msgpack";
+        } else if (robotType == "unicycle1_3d_v0"){
+            motionsFile = "../new_format_motions/unicycle1_3d_v0/unicycle1_3d_v0.bin.im.bin.sp.bin";
         } else if (robotType == "unicycle2_v0"){
             motionsFile = "../new_format_motions/unicycle2_v0/unicycle2_v0.msgpack";
         } else if (robotType == "car1_v0"){
@@ -207,7 +209,7 @@ int main(int argc, char* argv[]) {
           options_tdbastar.motionsFile = all_motionsFile[i];
           load_motion_primitives_new(options_tdbastar.motionsFile, *robot, robot_motions[problem.robotTypes[i]], 
                                       /*options_tdbastar.max_motions*/1e6,
-                                      options_tdbastar.cut_actions, /*shuffle*/true, options_tdbastar.check_cols);
+                                      options_tdbastar.cut_actions, /*shuffle*/false, options_tdbastar.check_cols);
            // get the needed submotions for the search part
           motion_to_motion(robot_motions[problem.robotTypes[i]], sub_motions[problem.robotTypes[i]], *robot, options_tdbastar.max_motions);
       }
@@ -447,7 +449,10 @@ int main(int argc, char* argv[]) {
           auto discrete_end = std::chrono::steady_clock::now();
           duration_discrete = discrete_end - discrete_start;
           std::cout << "Time taken for discrete search: " << duration_discrete.count() << " seconds" << std::endl;
-          // return 0;
+          stats << "  - d_t: " << duration_discrete.count() << "\n";
+          stats << "    d_cost: " << P.cost << "\n";
+          stats.flush();
+          return 0;
           // read the discrete search as initial guess
           MultiRobotTrajectory discrete_search_sol;
           discrete_search_sol.read_from_yaml(outputFile.c_str());
