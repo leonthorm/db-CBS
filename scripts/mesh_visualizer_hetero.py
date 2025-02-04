@@ -71,7 +71,7 @@ def visualize(env_file, result_file):
     states = []
     name_robot = 0
     max_k = 0
-    polulu_size = [0.1, 0.1, 1.2]
+    polulu_size = [0.05, 0.05, 0.6]
     # start, goal states
     for i in range(len(result["result"])):
       state = []
@@ -95,14 +95,18 @@ def visualize(env_file, result_file):
       elif robot_type == "unicycle1_3d_v0":
           vis[f"Polulu{name_robot}"].set_object(
               g.Box(polulu_size),
-              g.MeshLambertMaterial(color=0xFFA500)  # Orange
+              g.MeshLambertMaterial(color=0xCCCC00)  # dark yellow
           )
 
       # Set trajectory visualization (Green)
-      vis[f"trajectory{name_robot}"].set_object(
-          g.Line(g.PointsGeometry(position), g.LineBasicMaterial(color=0x00FF00))
-      )
-
+    #   vis[f"trajectory{name_robot}"].set_object(
+    #       g.Line(g.PointsGeometry(position), g.LineBasicMaterial(color=0x00FF00))
+    #   )
+      vis[f"trajectory{name_robot}"].set_object(g.Line(
+        g.PointsGeometry(position),
+        g.LineBasicMaterial(color=0x006400 if name_robot < 4  else 0xFF8C00)
+        )
+        )
       name_robot += 1
 
     # Animate both robots
@@ -117,7 +121,7 @@ def visualize(env_file, result_file):
               )
           )
           frame[f"Polulu{l}"].set_transform(
-              tf.translation_matrix(robot_state[:3]).dot(
+              tf.translation_matrix(robot_state[:3] + np.array([0, 0, 0.30])).dot(
                   tf.quaternion_matrix(np.array([1, 0, 0, 0]))
               )
           )

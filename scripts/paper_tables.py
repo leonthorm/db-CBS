@@ -273,7 +273,19 @@ def write_table6(trials, timelimit):
 		"drone10c",
 		"drone12c",
 		"drone16c",
+		"wall_drone8c",
+		"wall_drone10c",
 	]
+	instance_names = {
+		'drone2c': "drone2",
+		'drone4c': "drone4",
+		'drone8c': "drone8",
+		'drone10c': "drone10",
+		'drone12c': "drone12",
+		'drone16c': "drone16",
+		'wall_drone8c': "wall8",
+		'wall_drone10c': "wall10",
+	}
 	algs = [
 		"tro-18",
 		"db-ecbs-conservative",
@@ -354,6 +366,28 @@ def write_table6(trials, timelimit):
 		'J^f_median': 657.4,
 		'Jr^f_median': None,
 	}
+	# wall8
+	result_wall8 = result["wall_drone8c"]
+	result_wall8["tro-18"] = {
+		'success': '*',
+		't^st_median': '*',
+		'tr^st_median': '*',
+		'J^st_median': '*',
+		'Jr^st_median': '*',
+		'J^f_median': '*',
+		'Jr^f_median': '*',
+	}
+	# wall10
+	result_wall10 = result["wall_drone10c"]
+	result_wall10["tro-18"] = {
+		'success': '*',
+		't^st_median': '*',
+		'tr^st_median': '*',
+		'J^st_median': '*',
+		'Jr^st_median': '*',
+		'J^f_median': '*',
+		'Jr^f_median': '*',
+	}
 
 	output_path = Path("../results/paper_table2.pdf")
 	with open(output_path.with_suffix(".tex"), "w") as f:
@@ -364,12 +398,12 @@ def write_table6(trials, timelimit):
 		f.write("\n")
 		f.write(r"% GENERATED - DO NOT EDIT - " + output_path.name + "\n")
 
-		out = r"\begin{tabular}{c || c"
+		out = r"\begin{tabular}{c | c"
 		for alg in algs:
 			if not regret:
-				out += r" || r|r|r|r"
+				out += r" | r|r|r|r"
 			else:
-				out += r" || r|r|r"
+				out += r" | r|r|r"
 		out += "}\n"
 		f.write(out)
 		out = r"\# & Instance"
@@ -381,12 +415,11 @@ def write_table6(trials, timelimit):
 					out += r" & \multicolumn{3}{c}{"
 			else:
 				if not regret:
-					out += r" & \multicolumn{4}{c||}{"
+					out += r" & \multicolumn{4}{c|}{"
 				else:
-					out += r" & \multicolumn{3}{c||}{"
+					out += r" & \multicolumn{3}{c|}{"
 			out += alg_names[alg]
 			out += r"}"
-
 		out += r"\\"
 		f.write(out)
 		out = r"& "
@@ -396,7 +429,6 @@ def write_table6(trials, timelimit):
 		else:
 			for alg in algs:
 				out += r" & $p$ & $t_r^{\mathrm{st}} [\%]$ & $J_r^{f} [\%]$"
-
 		out += r"\\"
 		f.write(out)
 		f.write(r"\hline")
@@ -407,7 +439,11 @@ def write_table6(trials, timelimit):
 			out += r"\hline"
 			out += "\n"
 			out += "{} & ".format(r_number+1)
-			out += "{} ".format(row.replace("_", "\_"))
+			if row in instance_names:
+				out += instance_names[row]
+			else:
+				out += "{} ".format(row.replace("_", "\_"))
+			# out += "{} ".format(row.replace("_", "\_"))
 
 			for alg in algs:
 				if not regret:
@@ -568,15 +604,15 @@ def write_table8(trials, timelimit):
 
 if __name__ == '__main__':
 	trials = 5
-	timelimit = 10*60
+	timelimit = 2*60*60
 	# write_table1(trials, timelimit)
 	# write_table2(trials, timelimit)
 	# write_table3(trials, timelimit)
 	# write_table4(trials, timelimit)
 	# write_table5(trials, timelimit)
-	# write_table6(trials, timelimit)
+	write_table6(trials, timelimit)
 	# write_table7(trials, timelimit)
-	write_table8(trials, timelimit)
+	# write_table8(trials, timelimit)
 
 
 

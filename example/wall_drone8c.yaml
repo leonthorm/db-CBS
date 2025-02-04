@@ -25,11 +25,11 @@ robots:
 
   - type: integrator2_3d_v0 # 3
     start: [-0.5, -1, 0.5, 0, 0, 0] 
-    goal:  [0, 1.5, 1.2, 0, 0, 0] 
+    goal:  [0, 1.5, 1.0, 0, 0, 0] 
 
   - type: integrator2_3d_v0 # 4
     start: [-0.5, -1.5, 0.5, 0, 0, 0] 
-    goal:  [0.5, 1.5, 1.2, 0, 0, 0] 
+    goal:  [0.5, 1.5, 1.0, 0, 0, 0] 
 
   - type: integrator2_3d_v0 # 5
     start: [0, 1, 0.5, 0, 0, 0] 

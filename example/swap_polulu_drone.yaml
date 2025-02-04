@@ -1,6 +1,6 @@
 environment:
-  min: [-1.5, -1, 0]
-  max: [1.5, 1, 1]
+  min: [-1.5, -1.2, 0]
+  max: [1.5, 1.2, 1]
   obstacles:
 robots:
   - type: integrator2_3d_v0 # 1
@@ -21,17 +21,17 @@ robots:
 
 
   - type: unicycle1_3d_v0 # 5
-    start: [-0.5, 0.5, 0, 1.57] 
-    goal:  [1, 1, 0, 1.57] 
+    start: [-0.5, -0.5, 0, 1.57] 
+    goal:  [-0.5, 0.5, 0, 1.57] 
 
   - type: unicycle1_3d_v0 # 6
-    start: [0, 0.5, 0, 1.57] 
-    goal:  [0.5, 1, 0, 1.57] 
+    start: [0, -0.5, 0, 1.57] 
+    goal:  [0, 0.5, 0, 1.57] 
 
   - type: unicycle1_3d_v0 # 7
-    start: [0.5, 0.5, 0, 1.57] 
-    goal:  [0, 1, 0, 1.57] 
+    start: [0.5, -0.5, 0, 1.57] 
+    goal:  [0.5, 0.5, 0, 1.57] 
 
   - type: unicycle1_3d_v0 # 8
-    start: [1, 0.5, 0, 1.57] 
-    goal:  [-0.5, 1, 0, 1.57] 
+    start: [1, -0.5, 0, 1.57] 
+    goal:  [1, 0.5, 0, 1.57] 

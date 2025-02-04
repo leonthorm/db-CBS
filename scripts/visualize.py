@@ -156,15 +156,25 @@ class Animation:
       if filename_output is not None:
 
         add_patches = []
+        # for robot, robot_type, color in zip(self.result["result"], self.robot_types, self.colors):
+        #   for t in np.arange(0, T+21, 20):
+        #     if t >= len(robot["states"]):
+        #       state = robot["states"][-1]
+        #     else:
+        #       state = robot["states"][t]
+        #     add_patches.extend(self.draw_robot(state, robot_type, facecolor=color, alpha=0.2+0.6*min(t,len(robot["states"]))/T))
+        #     if t >= len(robot["states"]):
+        #       break
         for robot, robot_type, color in zip(self.result["result"], self.robot_types, self.colors):
-          for t in np.arange(0, T+21, 20):
-            if t >= len(robot["states"]):
-              state = robot["states"][-1]
-            else:
-              state = robot["states"][t]
-            add_patches.extend(self.draw_robot(state, robot_type, facecolor=color, alpha=0.2+0.6*min(t,len(robot["states"]))/T))
-            if t >= len(robot["states"]):
-              break
+          start_state = robot["states"][0]
+          end_state = robot["states"][-1]
+
+          # Add initial state
+          add_patches.extend(self.draw_robot(start_state, robot_type, facecolor=color, alpha=0.2))
+
+          # Add final state with darker alpha
+          add_patches.extend(self.draw_robot(end_state, robot_type, facecolor=color, alpha=0.8))
+          
         fname = str(Path(filename_output).with_suffix(".pdf"))
         self.ax.get_xaxis().set_visible(False)
         self.ax.get_yaxis().set_visible(False)
