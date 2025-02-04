@@ -220,7 +220,7 @@ def main():
 		# "k-cbs",
 		# "db-cbs",
 		# "db-ecbs",
-		# "db-ecbs-residual",
+		"db-ecbs-residual",
 		"db-ecbs-conservative",
 	]
 	trials = 5 
