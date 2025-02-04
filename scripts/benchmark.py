@@ -220,7 +220,7 @@ def main():
 		# "k-cbs",
 		# "db-cbs",
 		# "db-ecbs",
-		"db-ecbs-residual",
+		# "db-ecbs-residual",
 		"db-ecbs-conservative",
 	]
 	trials = 5 
@@ -257,7 +257,7 @@ def main():
 	# (Path("../results") / 'table.pdf').unlink()
 	# (Path("../results") / 'stats.pdf').unlink()
 
-	paper_tables.write_table6(trials, timelimit)
+	# paper_tables.write_table6(trials, timelimit)
 	# paper_tables.write_table7(trials, timelimit) # 2D case
 
 if __name__ == '__main__':
