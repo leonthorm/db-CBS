@@ -96,19 +96,21 @@ for file_path in file_paths:
 # plot_stacked_bar(data_iterations, instances)
 
 def add_cost_and_time_over_robots_plot(a, i):
-    folder = "/home/akmarak-laptop/IMRC/db-CBS/results/add_node/"
+    # folder = "/home/akmarak-laptop/IMRC/db-CBS/results/add_node/"
+    folder = "/home/akmarak-laptop/IMRC/db-CBS/results/heuristics/"
     t_values = {key: [] for key in a}  # Store t values for a1 and a2
     cost_values = {key: [] for key in a}  # Store t values for a1 and a2
-    colors = ['red', 'blue']
-    labels = ['Always Add', 'Rewire']
-    x = np.array([1, 2, 3, 4]) 
+    colors = ['green', 'red'] # ['red', 'blue']
+    labels = ['L1', 'L2'] # ['Always Add', 'Rewire']
+    # x = np.array([1, 2, 3, 4]) 
+    x = np.array([1, 2, 3, 4, 5]) 
     for a_instance in a:
         for i_instance in i:
             yaml_file = folder + a_instance + "/" + i_instance + "/db-ecbs/000/stats.yaml" 
             try:
                 with open(yaml_file, 'r') as file:
                     data = yaml.safe_load(file)
-                    stats = data["stats"]
+                    # stats = data["stats"]
                     if 'd_t' in data["stats"][0]:
                         t_values[a_instance].append(data["stats"][0]['d_t']) # always the only one stat
                         cost_values[a_instance].append(data["stats"][0]['d_cost']) # always the only one stat
@@ -134,23 +136,88 @@ def add_cost_and_time_over_robots_plot(a, i):
     ax[1].set_ylabel("Time [s]")
     ax[-1].set_xticks(x)
     i2 = [
-        "drone2",
+        # "drone2",
         "drone4",
         "drone8",
-        "drone10",
+        # "drone10",
+        "drone12",
+        "drone16",
+    ]
+    ax[-1].set_xticklabels(i2)
+    plt.show()
+
+# if the folder has many iterations
+def add_cost_and_time_over_robots_plot_itr(a, i, itr):
+    # folder = "/home/akmarak-laptop/IMRC/db-CBS/results/add_node/"
+    folder = "/home/akmarak-laptop/IMRC/db-CBS/results/heuristics/"
+    t_values = {key: [] for key in a}  # Store t values for a1 and a2
+    cost_values = {key: [] for key in a}  # Store t values for a1 and a2
+    colors = ['green', 'red'] # ['red', 'blue']
+    labels = ['L1', 'L2'] # ['Always Add', 'Rewire']
+    # x = np.array([1, 2, 3, 4]) 
+    x = np.array([1, 2, 3, 4]) 
+    for a_instance in a:
+        for i_instance in i:
+            t = 0
+            cost = 0
+            valid = False
+            for it in range(itr):
+                yaml_file = folder + a_instance + "/" + i_instance + "/db-ecbs/00" + str(it) + "/stats.yaml" 
+                try:
+                    with open(yaml_file, 'r') as file:
+                        data = yaml.safe_load(file)
+                        # stats = data["stats"]
+                        if 'd_t' in data["stats"][0]:
+                            t += data["stats"][0]['d_t']
+                            cost += data["stats"][0]['d_cost']
+                            valid = True
+                        else:
+                            print(f"Warning: 't, cost' not found in {yaml_file}")
+                except FileNotFoundError:
+                    print(f"Error: {yaml_file} not found")
+                    t_values[a_instance].append(None)  # Keep structure for plotting
+                    cost_values[a_instance].append(None)  # Keep structure for plotting
+            if(valid):
+                t_values[a_instance].append(t / itr)  # take the average
+                cost_values[a_instance].append(cost / itr)  
+    print(t_values)
+    fig, ax = plt.subplots(2, 1, sharex='all', sharey='none')
+    for i in range(2):
+    #   ax[i].set_xscale('log')
+      ax[i].grid(which='both', axis='x', linestyle='dashed')
+      ax[i].grid(which='major', axis='y', linestyle='dashed')
+
+    parameters = {'p': cost_values, 't': t_values}
+    for idx, (param, values) in enumerate(parameters.items()):
+        for i in range(2):  # Two lines for each parameter
+            ax[idx].plot(x, values[a[i]], color=colors[i], linewidth=3, alpha=0.8, label=labels[i])
+
+    ax[0].legend()
+    ax[0].set_ylabel(r"Cost [s]")
+    ax[1].set_ylabel("Time [s]")
+    ax[-1].set_xticks(x)
+    i2 = [
+        # "drone2",
+        "drone4",
+        "drone8",
+        # "drone10",
+        "drone12",
+        "drone16",
     ]
     ax[-1].set_xticklabels(i2)
     plt.show()
 
 def main():
-    a = ["always_add", "rewire"]
+    a = ["L1", "L2"] # ["always_add", "rewire"]
     i = [
-        "drone2c",
+        # "drone2c",
         "drone4c",
         "drone8c",
-        "drone10c",
+        # "drone10c",
+        "drone12c",
+        "drone16c",
     ]
-    add_cost_and_time_over_robots_plot(a, i)
+    add_cost_and_time_over_robots_plot_itr(a, i, 2)
     
 if __name__ == "__main__":
   main()

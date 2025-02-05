@@ -193,7 +193,7 @@ def main():
 		# "window4_demo",
 
 		# 3D scenarios with octomap
-		"drone1c",
+		# "drone1c",
 		"drone2c",
 		"drone4c",
 		"drone8c",
@@ -257,8 +257,8 @@ def main():
 	# (Path("../results") / 'table.pdf').unlink()
 	# (Path("../results") / 'stats.pdf').unlink()
 
-	# paper_tables.write_table6(trials, timelimit)
-	# paper_tables.write_table7(trials, timelimit) # 2D case
+	paper_tables.write_table6(trials, timelimit)
+	paper_tables.write_table7(trials, timelimit) # 2D case
 
 if __name__ == '__main__':
 	main()

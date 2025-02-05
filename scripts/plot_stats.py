@@ -51,7 +51,10 @@ class Report:
   def add_time_cost_plot(self, exp_name):
     self._add_page()
     self.fig, self.ax = plt.subplots()
-    self.ax.set_title(exp_name)
+    # self.ax.set_title(exp_name)
+    self.ax.grid(which='both', axis='x', linestyle='dashed')#color='r', linestyle='-', linewidth=2)
+    self.ax.grid(which='major', axis='y', linestyle='dashed')#color='r', linestyle='-', linewidth=2)
+
 
     for (exp_name_stats, algo), costs in self.stats.items():
       if exp_name_stats != exp_name:
