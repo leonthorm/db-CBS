@@ -196,10 +196,10 @@ def main():
 		# "drone1c",
 		"drone2c",
 		"drone4c",
-		# "drone8c",
-		# "drone10c",
-		# "drone12c",
-		# "drone16c",
+		"drone8c",
+		"drone10c",
+		"drone12c",
+		"drone16c",
 		# "drone24c",
 		# "drone28c",
 		# "drone32c",
@@ -224,7 +224,7 @@ def main():
 		"db-ecbs-conservative",
 	]
 	trials = 5 
-	timelimit = 20*60 
+	timelimit = 2.5*60*60 
 
 	tasks = []
 	for instance in instances:
