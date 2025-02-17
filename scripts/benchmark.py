@@ -196,10 +196,10 @@ def main():
 		# "drone1c",
 		"drone2c",
 		"drone4c",
-		"drone8c",
-		"drone10c",
-		"drone12c",
-		"drone16c",
+		# "drone8c",
+		# "drone10c",
+		# "drone12c",
+		# "drone16c",
 		# "drone24c",
 		# "drone28c",
 		# "drone32c",
@@ -224,7 +224,7 @@ def main():
 		"db-ecbs-conservative",
 	]
 	trials = 5 
-	timelimit = 2*60*60 
+	timelimit = 1*60*60 
 
 	tasks = []
 	for instance in instances:
@@ -258,7 +258,7 @@ def main():
 	# (Path("../results") / 'stats.pdf').unlink()
 
 	paper_tables.write_table6(trials, timelimit)
-	paper_tables.write_table7(trials, timelimit) # 2D case
+	# paper_tables.write_table7(trials, timelimit) # 2D case
 
 if __name__ == '__main__':
 	main()
