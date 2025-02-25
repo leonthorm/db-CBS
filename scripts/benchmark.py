@@ -130,8 +130,8 @@ def execute_task(task: ExecutionTask):
 	else:
 		vis_script = scripts_path / "visualize.py"
 
-	# for file in visualize_files:
-		# run_visualize(vis_script, env, result_folder / file)
+	for file in visualize_files:
+		run_visualize(vis_script, env, result_folder / file)
 	
 	# search_viz_script = scripts_path / "visualize_search.py"
 	# if(len(search_plot_files) > 0):
@@ -194,12 +194,12 @@ def main():
 
 		# 3D scenarios with octomap
 		# "drone1c",
-		"drone2c",
-		"drone4c",
-		"drone8c",
-		"drone10c",
-		"drone12c",
-		"drone16c",
+		# "drone2c",
+		# "drone4c",
+		# "drone8c",
+		# "drone10c",
+		# "drone12c",
+		# "drone16c",
 		# "drone24c",
 		# "drone28c",
 		# "drone32c",
@@ -224,7 +224,7 @@ def main():
 		"db-ecbs-conservative",
 	]
 	trials = 5 
-	timelimit = 2.5*60*60 
+	timelimit = 3*60*60 
 
 	tasks = []
 	for instance in instances:
@@ -257,7 +257,7 @@ def main():
 	# (Path("../results") / 'table.pdf').unlink()
 	# (Path("../results") / 'stats.pdf').unlink()
 
-	paper_tables.write_table6(trials, timelimit)
+	# paper_tables.write_table6(trials, timelimit)
 	# paper_tables.write_table7(trials, timelimit) # 2D case
 
 if __name__ == '__main__':
