@@ -277,14 +277,14 @@ def write_table6(trials, timelimit):
 		"wall_drone10c",
 	]
 	instance_names = {
-		'drone2c': "drone2",
-		'drone4c': "drone4",
-		'drone8c': "drone8",
-		'drone10c': "drone10",
-		'drone12c': "drone12",
-		'drone16c': "drone16",
-		'wall_drone8c': "wall8",
-		'wall_drone10c': "wall10",
+		'drone2c': "wall2",
+		'drone4c': "wall4",
+		'drone8c': "wall8",
+		'drone10c': "wall10",
+		'drone12c': "wall12",
+		'drone16c': "wall16",
+		'wall_drone8c': "window8",
+		'wall_drone10c': "window10",
 	}
 	algs = [
 		"tro-18",
@@ -604,13 +604,13 @@ def write_table8(trials, timelimit):
 
 if __name__ == '__main__':
 	trials = 5
-	timelimit = 2*60*60
+	timelimit = 2.5*60*60
 	# write_table1(trials, timelimit)
 	# write_table2(trials, timelimit)
 	# write_table3(trials, timelimit)
 	# write_table4(trials, timelimit)
 	# write_table5(trials, timelimit)
-	write_table6(trials, timelimit)
+	write_table6(trials, timelimit) # window, wall together
 	# write_table7(trials, timelimit)
 	# write_table8(trials, timelimit)
 

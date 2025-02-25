@@ -284,7 +284,6 @@ int main(int argc, char* argv[]) {
     }
     bool solved_db = false;
     std::cout << "Running the main loop" << std::endl;
-    auto discrete_start = std::chrono::steady_clock::now();
     // main loop
     problem.starts = problem_original.starts; 
     problem.goals = problem_original.goals;
@@ -333,6 +332,7 @@ int main(int argc, char* argv[]) {
       int id = 1;
       tmp_solutions.clear();
       std::cout << "Node ID is " << id << ", root" << std::endl;
+      auto discrete_start = std::chrono::steady_clock::now();
       for (const auto &robot : robots){
         expanded_trajs_tmp.clear();
         options_tdbastar.motions_ptr = &sub_motions[problem.robotTypes[robot_id]]; 
@@ -446,6 +446,15 @@ int main(int argc, char* argv[]) {
           create_dir_if_necessary(outputFile);
           std::ofstream out_db(outputFile);
           export_solutions(P.solution, &out_db); 
+          // if (save_expanded_trajs){
+          //   std::ofstream out2(output_folder + "/expanded_traj.yaml");
+          //   out2 << "trajs:" << std::endl;
+          //   for (auto i = 0; i < expanded_trajs_tmp.size(); i++){
+          //     auto traj = expanded_trajs_tmp.at(i);
+          //     out2 << "  - " << std::endl;
+          //     traj.to_yaml_format(out2, "    ");
+          //   }
+          // }
           auto discrete_end = std::chrono::steady_clock::now();
           duration_discrete = discrete_end - discrete_start;
           std::cout << "Time taken for discrete search: " << duration_discrete.count() << " seconds" << std::endl;
@@ -477,7 +486,7 @@ int main(int argc, char* argv[]) {
                 cost_tmp += traj.cost;
               }
               for (size_t l = 0; l < num_robots; l++){
-                upper_bounds[l] = cost_tmp; // - (hs_total - hs[l]);
+                upper_bounds[l] = cost_tmp - (hs_total - hs[l]);
               }
               if (cost_tmp < lowest_cost) {
                 lowest_cost = cost_tmp;
@@ -511,7 +520,7 @@ int main(int argc, char* argv[]) {
                 }
               }
               // extract motions from the solution
-              extract_motion_primitives(problem, optimization_sol, sub_motions, robots, /*length*/8);
+              extract_motion_primitives(problem, optimization_sol, sub_motions, robots, /*length*/1);
               itr_cost_data["runs"].push_back(YAML::Node());
               itr_cost_data["runs"][iteration]["iteration"] = iteration;
               itr_cost_data["runs"][iteration]["lowest_cost"] = lowest_cost;
