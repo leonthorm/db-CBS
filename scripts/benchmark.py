@@ -199,7 +199,7 @@ def main():
 		# "drone8c",
 		# "drone10c",
 		# "drone12c",
-		# "drone16c",
+		"drone16c",
 		# "drone24c",
 		# "drone28c",
 		# "drone32c",

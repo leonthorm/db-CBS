@@ -486,7 +486,7 @@ int main(int argc, char* argv[]) {
                 cost_tmp += traj.cost;
               }
               for (size_t l = 0; l < num_robots; l++){
-                upper_bounds[l] = cost_tmp - (hs_total - hs[l]);
+                upper_bounds[l] = cost_tmp; // - (hs_total - hs[l]);
               }
               if (cost_tmp < lowest_cost) {
                 lowest_cost = cost_tmp;
@@ -520,7 +520,7 @@ int main(int argc, char* argv[]) {
                 }
               }
               // extract motions from the solution
-              extract_motion_primitives(problem, optimization_sol, sub_motions, robots, /*length*/1);
+              extract_motion_primitives(problem, optimization_sol, sub_motions, robots, /*length*/8);
               itr_cost_data["runs"].push_back(YAML::Node());
               itr_cost_data["runs"][iteration]["iteration"] = iteration;
               itr_cost_data["runs"][iteration]["lowest_cost"] = lowest_cost;
