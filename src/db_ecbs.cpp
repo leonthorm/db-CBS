@@ -180,6 +180,8 @@ int main(int argc, char* argv[]) {
             motionsFile = "../new_format_motions/integrator2_3d_v0/long_50_5000/integrator2_3d_v0.bin.im.bin.sp.bin";
         } else if (robotType.find("_res_") != std::string::npos){
             motionsFile = "../new_format_motions/integrator2_3d_v0/residual/long_50_5000/integrator2_3d_v0.bin.im.bin.sp.bin";
+        } else if (robotType == "quad3d_v0"){
+          motionsFile = "../new_format_motions/quad3d_v0/quad3d_v0_all3.bin.im.bin.sp1.bin.ca.bin.msgpack";
         } else{
             throw std::runtime_error("Unknown motion filename for this robottype!");
         }

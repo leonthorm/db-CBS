@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
       return 1;
     }
     YAML::Node cfg = YAML::LoadFile(cfgFile);
-    // cfg = cfg["db-cbs"]["default"];
+    cfg = cfg["db-cbs"]["default"];
     float alpha = cfg["alpha"].as<float>();
     bool filter_duplicates = cfg["filter_duplicates"].as<bool>();
     fs::path output_path(outputFile);
@@ -143,6 +143,8 @@ int main(int argc, char* argv[]) {
             motionsFile = "../new_format_motions/integrator2_2d_v0/integrator2_2d_v0.msgpack";
         } else if (robotType == "integrator2_3d_v0"){
             motionsFile = "../new_format_motions/integrator2_3d_v0/integrator2_3d_v0.bin.im.bin.sp.bin";
+        } else if (robotType == "quad3d_v0"){
+            motionsFile = "../new_format_motions/quad3d_v0/quad3d_v0_all3.bin.im.bin.sp1.bin.ca.bin.msgpack";
         } else{
             throw std::runtime_error("Unknown motion filename for this robottype!");
         }
